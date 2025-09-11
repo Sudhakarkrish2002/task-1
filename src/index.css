@@ -1,0 +1,278 @@
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
+  body {
+    @apply antialiased bg-white text-gray-900;
+  }
+  
+  * {
+    @apply box-border;
+  }
+}
+
+@layer components {
+  /* React Grid Layout Custom Styles */
+  .react-grid-layout {
+    position: relative;
+  }
+  
+  .react-grid-item {
+    transition: all 200ms ease;
+    transition-property: left, top;
+  }
+  
+  .react-grid-item.cssTransforms {
+    transition-property: transform;
+  }
+  
+  .react-grid-item > .react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjOTk5IiBkPSJtNiAwaC02djZoNnoiLz4KPC9zdmc+');
+    background-position: bottom right;
+    padding: 0 3px 3px 0;
+    background-repeat: no-repeat;
+    background-origin: content-box;
+    box-sizing: border-box;
+    cursor: se-resize;
+  }
+  
+  .react-grid-item.react-grid-placeholder {
+    background: #3b82f6;
+    opacity: 0.2;
+    transition-duration: 100ms;
+    z-index: 2;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+  
+  .react-grid-item.react-draggable-dragging {
+    transition: none;
+    z-index: 3;
+    will-change: transform;
+  }
+  
+  .react-grid-item.dropping {
+    visibility: hidden;
+  }
+  
+  .react-grid-item.react-grid-placeholder {
+    background: #3b82f6;
+    opacity: 0.2;
+    transition-duration: 100ms;
+    z-index: 2;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+  
+  .react-grid-item > .react-resizable-handle::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    border-right: 2px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Grid item container styles */
+  .react-grid-item {
+    overflow: hidden;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+  
+  .react-grid-item .grid-item {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  
+  .react-grid-item.selected {
+    box-shadow: 0 0 0 2px #3b82f6;
+    z-index: 10;
+  }
+  
+  /* Ensure widget content is contained */
+  .react-grid-item > div {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    position: relative;
+  }
+  
+  /* Enhanced grid layout container */
+  .react-grid-layout {
+    overflow: visible;
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+  }
+  
+  /* Widget content containment */
+  .grid-item {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .grid-item > * {
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  /* Enhanced widget display */
+  .enhanced-grid-layout {
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+  }
+
+  .enhanced-grid-layout .react-grid-layout {
+    min-height: 100% !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Responsive widget sizing */
+  @media (max-width: 768px) {
+    .react-grid-item {
+      min-height: 120px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .react-grid-item {
+      min-height: 100px;
+    }
+  }
+
+  /* Widget content responsive adjustments */
+  .widget-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .widget-header {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .widget-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 8px;
+  }
+
+  /* Ensure charts and maps are responsive */
+  .chart-container,
+  .map-container {
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+  }
+
+  /* Gauge widget specific styles */
+  .gauge-widget {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* Notification widget scroll */
+  .notification-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* Slider widget responsive */
+  .slider-widget {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* Ensure proper spacing for all widgets */
+  .react-grid-layout .react-grid-item {
+    margin-bottom: 16px;
+  }
+
+  /* Add extra bottom margin to the last row of widgets */
+  .react-grid-layout .react-grid-item:last-child {
+    margin-bottom: 32px;
+  }
+
+  /* Ensure grid container has proper height calculation */
+  .grid-manager .enhanced-grid-layout {
+    height: calc(100vh - 160px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Smooth scrolling for better UX */
+  .enhanced-grid-layout {
+    scroll-behavior: smooth;
+  }
+
+  /* Ensure widgets are fully visible when scrolled */
+  .react-grid-layout {
+    padding-bottom: 50px;
+  }
+
+  /* Dashboard view specific styles */
+  .dashboard-view {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .dashboard-view .react-grid-layout {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .dashboard-view .enhanced-grid-layout {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  /* Ensure dashboard widgets are properly spaced */
+  .dashboard-view .react-grid-item {
+    margin-bottom: 16px;
+  }
+
+  /* Dashboard container should allow scrolling */
+  .dashboard-view .react-grid-layout {
+    padding-bottom: 32px;
+  }
+}
