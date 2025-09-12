@@ -28,7 +28,17 @@ export const useGridLayout = (options = {}) => {
   } = options
 
   const [widgets, setWidgets] = useState(initialWidgets)
-  const [layouts, setLayouts] = useState(initialLayouts)
+  const [layouts, setLayouts] = useState(
+    Object.keys(initialLayouts).length > 0 
+      ? initialLayouts 
+      : {
+          lg: [],
+          md: [],
+          sm: [],
+          xs: [],
+          xxs: []
+        }
+  )
   const [selectedWidget, setSelectedWidget] = useState(null)
   const [overlaps, setOverlaps] = useState([])
   const [isValidating, setIsValidating] = useState(false)
@@ -47,8 +57,18 @@ export const useGridLayout = (options = {}) => {
   useEffect(() => {
     if (Object.keys(initialLayouts).length > 0) {
       setLayouts(initialLayouts)
+    } else {
+      // Initialize empty layout structure for new dashboards
+      setLayouts({
+        lg: [],
+        md: [],
+        sm: [],
+        xs: [],
+        xxs: []
+      })
     }
   }, [initialLayouts])
+
 
   // Debounced validation function
   const debouncedValidate = useCallback(
@@ -80,8 +100,12 @@ export const useGridLayout = (options = {}) => {
     }
   }, [widgets, debouncedValidate])
 
-  // Add a new widget
+  // Widget addition
   const addWidget = useCallback((widgetType, widgetOptions = {}) => {
+    if (!widgetType) {
+      return null
+    }
+
     const newWidget = createWidget(widgetType, widgets, widgetOptions)
     
     setWidgets(prev => {
@@ -102,11 +126,9 @@ export const useGridLayout = (options = {}) => {
     // Update layouts to include the new widget
     setLayouts(prevLayouts => {
       const newLayouts = { ...prevLayouts }
-      // Initialize lg layout if it doesn't exist
       if (!newLayouts.lg) {
         newLayouts.lg = []
       }
-      // Add the new widget to the layout
       newLayouts.lg.push({
         i: newWidget.i,
         x: newWidget.x,

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react'
-import { Save, Eye, Settings, RotateCcw, Download, Upload } from 'lucide-react'
+import React, { useState, useCallback, useEffect } from 'react'
+import { Save, Eye, Settings, RotateCcw } from 'lucide-react'
 import { EnhancedGridLayout } from './EnhancedGridLayout'
 import { WidgetPalette } from './WidgetPalette'
 import { useGridLayout } from '../../hooks/useGridLayout'
@@ -12,8 +12,6 @@ import { Button } from '../ui/button'
  * @param {Array} props.initialWidgets - Initial widgets
  * @param {Function} props.renderWidget - Widget render function
  * @param {Function} props.onSave - Save callback
- * @param {Function} props.onExport - Export callback
- * @param {Function} props.onImport - Import callback
  * @param {string} props.title - Grid title
  * @param {boolean} props.showPalette - Show widget palette
  * @param {boolean} props.showToolbar - Show toolbar
@@ -24,20 +22,18 @@ export const GridManager = ({
   initialLayouts = {},
   renderWidget,
   onSave,
-  onExport,
-  onImport,
   onWidgetSettings,
   title = "Dashboard",
   showPalette = true,
   showToolbar = true,
   widgetTypes = [],
   className = '',
+  isSharedMode = false,
   ...props
 }) => {
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('grid')
-  const fileInputRef = useRef(null)
 
   // Use the grid layout hook
   const {
@@ -62,9 +58,11 @@ export const GridManager = ({
     debounceMs: 300
   })
 
-  // Handle widget addition
+  // Widget addition handler
   const handleWidgetAdd = useCallback((widgetType) => {
-    const newWidget = addWidget(widgetType)
+    if (widgetType) {
+      addWidget(widgetType)
+    }
   }, [addWidget])
 
   // Handle layout changes
@@ -74,6 +72,10 @@ export const GridManager = ({
 
   // Handle save
   const handleSave = useCallback(() => {
+    console.log('GridManager handleSave called')
+    console.log('Current widgets:', widgets)
+    console.log('Current layouts:', layouts)
+    
     if (onSave) {
       const saveData = {
         widgets,
@@ -81,71 +83,41 @@ export const GridManager = ({
         title,
         stats: getGridStats()
       }
+      console.log('Saving data:', saveData)
       onSave(saveData)
     } else {
       console.warn('No onSave function provided to GridManager')
     }
   }, [widgets, layouts, title, getGridStats, onSave])
 
-  // Handle export
-  const handleExport = useCallback(() => {
-    if (onExport) {
-      onExport({
-        widgets,
-        layouts,
-        title,
-        stats: getGridStats()
-      })
-    } else {
-      // Default export to JSON
-      const data = {
-        widgets,
-        layouts,
-        title,
-        stats: getGridStats(),
-        exportedAt: new Date().toISOString()
-      }
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-dashboard.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    }
-  }, [widgets, layouts, title, getGridStats, onExport])
 
-  // Handle import
-  const handleImport = useCallback((event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result)
-        if (onImport) {
-          onImport(data)
-        } else {
-          // Default import behavior
-          if (data.widgets) {
-            clearWidgets()
-            data.widgets.forEach(widget => addWidget(widget.type, widget))
-          }
-        }
-      } catch (error) {
-        console.error('Error importing file:', error)
-        alert('Error importing file. Please check the file format.')
-      }
-    }
-    reader.readAsText(file)
-  }, [onImport, clearWidgets, addWidget])
 
   // Get grid statistics
   const gridStats = getGridStats()
+
+  // Listen for save trigger from top bar
+  useEffect(() => {
+    const handleSaveTrigger = (event) => {
+      console.log('Save event received in GridManager')
+      // Use callback from event detail if provided, otherwise use default handleSave
+      const callback = event.detail?.callback
+      if (callback) {
+        const saveData = {
+          widgets,
+          layouts,
+          title,
+          stats: getGridStats()
+        }
+        console.log('Saving data with custom callback:', saveData)
+        callback(saveData)
+      } else {
+        handleSave()
+      }
+    }
+
+    window.addEventListener('gridManagerSave', handleSaveTrigger)
+    return () => window.removeEventListener('gridManagerSave', handleSaveTrigger)
+  }, [handleSave, widgets, layouts, title, getGridStats])
 
   return (
     <div className={`grid-manager min-h-screen bg-gray-50 ${className}`} {...props}>
@@ -166,6 +138,7 @@ export const GridManager = ({
                   </>
                 )}
               </div>
+              
             </div>
             
             <div className="flex items-center space-x-3">
@@ -189,49 +162,14 @@ export const GridManager = ({
                 <Eye className="w-4 h-4 mr-2" />
                 {isPreviewMode ? 'Edit Mode' : 'Preview Mode'}
               </Button>
-              
-              <Button
-                onClick={handleExport}
-                variant="outline"
-                size="sm"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleImport}
-                className="hidden"
-              />
-              
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import
-              </Button>
-              
-              <Button
-                onClick={handleSave}
-                size="sm"
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save
-              </Button>
             </div>
           </div>
         </div>
       )}
 
       <div className="flex h-[calc(100vh-120px)]">
-        {/* Widget Palette */}
-        {showPalette && (
+        {/* Widget Palette - Hidden in shared mode */}
+        {showPalette && !isSharedMode && (
           <div className="w-72 bg-white border-r border-gray-200 shadow-sm overflow-hidden">
             <WidgetPalette
               widgetTypes={widgetTypes}
@@ -252,20 +190,21 @@ export const GridManager = ({
             overlaps={overlaps}
             isValidating={isValidating}
             renderWidget={renderWidget}
-            isPreviewMode={isPreviewMode}
-            onLayoutChange={handleLayoutChange}
-            onWidgetDelete={removeWidget}
-            onWidgetCopy={duplicateWidget}
-            onWidgetAdd={handleWidgetAdd}
-            onWidgetSettings={onWidgetSettings}
-            showGridBackground={!isPreviewMode}
+            isPreviewMode={isPreviewMode || isSharedMode}
+            onLayoutChange={isSharedMode ? () => {} : handleLayoutChange}
+            onWidgetDelete={isSharedMode ? () => {} : removeWidget}
+            onWidgetCopy={isSharedMode ? () => {} : duplicateWidget}
+            onWidgetAdd={isSharedMode ? () => {} : handleWidgetAdd}
+            onWidgetSettings={isSharedMode ? () => {} : onWidgetSettings}
+            showGridBackground={!isPreviewMode && !isSharedMode}
             showStatusBar={false}
-            enableAutoFix={true}
+            enableAutoFix={!isSharedMode}
             className="h-full"
           />
         </div>
 
       </div>
+
     </div>
   )
 }

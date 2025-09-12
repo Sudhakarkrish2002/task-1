@@ -275,4 +275,23 @@
   .dashboard-view .react-grid-layout {
     padding-bottom: 32px;
   }
+
+  /* Empty dashboard state improvements */
+  .enhanced-grid-layout .empty-dashboard-state {
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .enhanced-grid-layout .empty-dashboard-state .empty-message {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Ensure grid background doesn't interfere with empty state */
+  .enhanced-grid-layout .grid-background {
+    z-index: 0;
+    opacity: 0.05;
+  }
 }

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react'
-import mqttService from '../../services/mqttService'
 
 export const GaugeWidget = ({ 
   widgetId,
@@ -35,17 +34,22 @@ export const GaugeWidget = ({
       }
     }
 
-    // Subscribe to MQTT topic
-    mqttService.subscribe(mqttTopic, handleMqttData)
+    // Generate mock data for demo
+    const generateMockData = () => {
+      const newData = {
+        timestamp: new Date().toISOString(),
+        value: Math.random() * (max - min) + min,
+        topic: mqttTopic
+      }
+      handleMqttData(newData)
+    }
 
-    // Also listen for connection status
-    mqttService.subscribe('connection', (data) => {
-      setConnected(data.status === 'connected')
-    })
+    // Set up mock data generation
+    const interval = setInterval(generateMockData, 2000)
+    setConnected(true)
 
     return () => {
-      mqttService.unsubscribe(mqttTopic, handleMqttData)
-      mqttService.unsubscribe('connection')
+      clearInterval(interval)
     }
   }, [mqttTopic])
 

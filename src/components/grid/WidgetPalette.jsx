@@ -59,20 +59,31 @@ export const WidgetPalette = ({
     (widget.description && widget.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  // Handle widget click
+  // Widget click handler
   const handleWidgetClick = useCallback((widgetType) => {
-    if (onWidgetAdd) {
+    console.log('Widget clicked (fallback):', widgetType)
+    if (onWidgetAdd && widgetType) {
       onWidgetAdd(widgetType)
     }
   }, [onWidgetAdd])
 
-  // Handle drag start
+  // Drag start handler - OPTIMIZED FOR REACT GRID LAYOUT
   const handleDragStart = useCallback((e, widgetType) => {
+    console.log('Drag start:', widgetType)
     setDraggedWidget(widgetType)
+    
+    // Set data for React Grid Layout
     e.dataTransfer.effectAllowed = 'copy'
     e.dataTransfer.setData('text/plain', widgetType)
-    // Store globally for access in drop handler
+    
+    // Set global variable - this is what RGL onDrop uses
     window.draggedWidgetType = widgetType
+    
+    console.log('Drag data set for RGL:', {
+      widgetType,
+      global: window.draggedWidgetType,
+      effectAllowed: e.dataTransfer.effectAllowed
+    })
   }, [])
 
   // Handle drag end

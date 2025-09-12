@@ -42,8 +42,8 @@ function SignIn() {
           
           console.log('Demo user logged in:', userData)
           
-          // Navigate to dashboard
-          navigate('/live-dashboard')
+          // Navigate to panels
+          navigate('/')
         } else {
           // For any other credentials, also allow login (demo mode)
           const userData = {
@@ -55,8 +55,8 @@ function SignIn() {
           
           console.log('User logged in:', userData)
           
-          // Navigate to dashboard
-          navigate('/live-dashboard')
+          // Navigate to panels
+          navigate('/')
         }
       } else {
         setError('Please fill in all fields')

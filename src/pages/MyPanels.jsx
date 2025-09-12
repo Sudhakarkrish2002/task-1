@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { usePanels, usePanelActions, usePanelStore } from '../stores/usePanelStore'
 import PanelSharing from '../components/panels/PanelSharing'
+import CreateDashboardModal from '../components/CreateDashboardModal'
 
 function MyPanels() {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ function MyPanels() {
   const [selectedPanel, setSelectedPanel] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [panelToDelete, setPanelToDelete] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   
   const panels = usePanels()
   const { deletePanel, updatePanel, removeDuplicates } = usePanelActions()
@@ -50,11 +52,23 @@ function MyPanels() {
 
   // CRUD Operations
   const handleCreatePanel = () => {
-    navigate('/create')
+    setShowCreateModal(true)
+  }
+
+  const handleCreateDashboard = async (dashboardData) => {
+    try {
+      const newPanel = usePanelStore.getState().createPanel(dashboardData)
+      alert('Dashboard created successfully!')
+      // Navigate to the create panel page with the new panel for editing
+      navigate(`/create?edit=${newPanel.id}`)
+    } catch (error) {
+      console.error('Error creating dashboard:', error)
+      throw error
+    }
   }
 
   const handleViewPanel = (panel) => {
-    navigate(`/dashboard?panel=${panel.id}`)
+    navigate(`/dashboard-container?panel=${panel.id}`)
   }
 
   const handleEditPanel = (panel) => {
@@ -369,6 +383,13 @@ function MyPanels() {
         onClose={() => setShowSharingModal(false)}
         panelName={selectedPanel?.name || "Panel"}
         panelId={selectedPanel?.id}
+      />
+
+      {/* Create Dashboard Modal */}
+      <CreateDashboardModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateDashboard={handleCreateDashboard}
       />
 
       {/* Delete Confirmation Modal */}

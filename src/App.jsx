@@ -1,30 +1,37 @@
 import { useState, Suspense, lazy, useEffect } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { 
   Bell, 
   Settings,
   User,
   Home,
   Grid3X3,
-  FileText,
   LogOut
 } from 'lucide-react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
-import PanelSharing from './components/panels/PanelSharing'
 
 // Lazy load pages for better performance
 const MyPanels = lazy(() => import('./pages/MyPanels'))
 const CreatePanel = lazy(() => import('./pages/CreatePanel'))
-const SimpleDashboard = lazy(() => import('./pages/SimpleDashboard'))
-const DashboardView = lazy(() => import('./pages/DashboardView'))
+const DashboardContainer = lazy(() => import('./pages/DashboardContainer'))
 const SignIn = lazy(() => import('./pages/SignIn'))
-const Document = lazy(() => import('./pages/Document'))
+const SharedDashboardView = lazy(() => import('./components/SharedDashboardView'))
+
+// Shared Dashboard Route Component
+function SharedDashboardRoute() {
+  const { panelId } = useParams()
+  return (
+    <SharedDashboardView 
+      panelId={panelId} 
+      onAccessGranted={(data) => console.log('Access granted:', data)}
+    />
+  )
+}
 
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [showSharingModal, setShowSharingModal] = useState(false)
   const [user, setUser] = useState(null)
   const [mqttStatus, setMqttStatus] = useState('disconnected')
 
@@ -69,13 +76,10 @@ function App() {
   // Navigation items
   const navItems = [
     { id: 'panels', label: 'My Panels', icon: Home, path: '/' },
-    { id: 'create', label: 'Create Panel', icon: Grid3X3, path: '/create' },
-    { id: 'dashboard', label: 'Live Dashboard', icon: Grid3X3, path: '/live-dashboard' },
-    { id: 'documents', label: 'Documents', icon: FileText, path: '/documents' },
   ]
 
-  // If user is not authenticated and not on signin page, redirect to signin
-  if (!user && location.pathname !== '/signin') {
+  // If user is not authenticated and not on signin page or shared dashboard, redirect to signin
+  if (!user && location.pathname !== '/signin' && !location.pathname.startsWith('/shared/')) {
     return <SignIn />
   }
 
@@ -86,7 +90,7 @@ function App() {
   }
 
   // Show loading while checking authentication
-  if (user === null && location.pathname !== '/signin') {
+  if (user === null && location.pathname !== '/signin' && !location.pathname.startsWith('/shared/')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -181,23 +185,14 @@ function App() {
           <Routes>
             <Route path="/" element={<MyPanels />} />
             <Route path="/create" element={<CreatePanel />} />
-            <Route path="/live-dashboard" element={<SimpleDashboard />} />
-            <Route path="/dashboard" element={<DashboardView />} />
-            <Route path="/documents" element={<Document />} />
+            <Route path="/dashboard-container" element={<DashboardContainer />} />
+            <Route path="/dashboard" element={<DashboardContainer />} />
             <Route path="/signin" element={<SignIn />} />
+            <Route path="/shared/:panelId" element={<SharedDashboardRoute />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>
 
-      {/* Panel Sharing Modal */}
-      {showSharingModal && (
-        <PanelSharing 
-          isOpen={showSharingModal}
-          onClose={() => setShowSharingModal(false)}
-          panelName="Home Dashboard"
-          panelId="home-dashboard"
-        />
-      )}
     </div>
   )
 }

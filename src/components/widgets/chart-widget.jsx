@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, memo, useCallback } from 'react'
 import * as echarts from 'echarts'
-import mqttService from '../../services/mqttService'
 
 export const ChartWidget = ({ 
   widgetId,
@@ -252,17 +251,23 @@ export const ChartWidget = ({
       }
     }
 
-    // Subscribe to MQTT topic
-    mqttService.subscribe(mqttTopic, handleMqttData)
+    // Generate mock data for demo
+    const generateMockData = () => {
+      const now = new Date()
+      const newData = {
+        timestamp: now.toISOString(),
+        value: Math.random() * 100,
+        topic: mqttTopic
+      }
+      handleMqttData(newData)
+    }
 
-    // Also listen for connection status
-    mqttService.subscribe('connection', (data) => {
-      setConnected(data.status === 'connected')
-    })
+    // Set up mock data generation
+    const interval = setInterval(generateMockData, 2000)
+    setConnected(true)
 
     return () => {
-      mqttService.unsubscribe(mqttTopic, handleMqttData)
-      mqttService.unsubscribe('connection')
+      clearInterval(interval)
     }
   }, [mqttTopic])
 

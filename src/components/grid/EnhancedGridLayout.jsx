@@ -99,48 +99,38 @@ export const EnhancedGridLayout = ({
     gridUtilization: widgets.length > 0 ? (widgets.reduce((acc, w) => acc + (w.w * w.h), 0) / (12 * 200)) * 100 : 0
   }
 
-  // Drag and drop handlers
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Set drop effect
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'copy'
-    }
-    
-    setIsDragOver(true)
-  }, [])
-
-  const handleDragEnter = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragOver(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Only set drag over to false if we're leaving the container entirely
-    const relatedTarget = e.relatedTarget
-    if (!containerRef.current?.contains(relatedTarget)) {
-      setIsDragOver(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback((e) => {
-    setIsDragOver(false)
+  // React Grid Layout drop handler - CORRECT SIGNATURE
+  const handleDrop = useCallback((layout, layoutItem, event) => {
+    console.log('RGL Drop event triggered:', { layout, layoutItem, event })
     
     // Get widget type from global variable
     const widgetType = window.draggedWidgetType
     
     if (widgetType && onWidgetAdd) {
+      console.log('Adding widget via RGL drop:', widgetType)
       onWidgetAdd(widgetType)
-      // Clear the global variable
       window.draggedWidgetType = null
+    } else {
+      console.log('No widget type found in global variable or no onWidgetAdd callback')
     }
+    
+    setIsDragOver(false)
   }, [onWidgetAdd])
+
+  // Simple drag over handler for visual feedback
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e) => {
+    if (!containerRef.current?.contains(e.relatedTarget)) {
+      setIsDragOver(false)
+    }
+  }, [])
 
   // Grid layout props
   const gridProps = {
@@ -209,11 +199,14 @@ export const EnhancedGridLayout = ({
       {isDragOver && (
         <div className="absolute inset-0 bg-red-50 border-2 border-dashed border-red-400 z-10 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
               <span className="text-2xl">📊</span>
             </div>
             <p className="text-lg font-semibold text-red-700">Drop widget here</p>
             <p className="text-sm text-red-600 mt-1">Release to add widget to dashboard</p>
+            {window.draggedWidgetType && (
+              <p className="text-xs text-red-500 mt-2">Widget: {window.draggedWidgetType}</p>
+            )}
           </div>
         </div>
       )}
@@ -223,19 +216,17 @@ export const EnhancedGridLayout = ({
         ref={containerRef}
         className={`relative flex-1 ${isDashboardView ? 'overflow-visible' : 'overflow-auto'}`}
         style={{ 
-          minHeight: isDashboardView ? 'auto' : '400px', 
+          minHeight: isDashboardView ? '400px' : '400px', 
           height: isDashboardView ? 'auto' : '100%' 
         }}
         onScroll={isDashboardView ? undefined : handleScroll}
         onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
       >
         {/* Grid Background */}
         {showGridBackground && !isPreviewMode && (
           <div 
-            className="absolute inset-0 pointer-events-none opacity-20"
+            className="absolute inset-0 pointer-events-none grid-background"
             style={{
               backgroundImage: `
                 linear-gradient(to right, #e5e7eb 1px, transparent 1px),
@@ -247,6 +238,21 @@ export const EnhancedGridLayout = ({
           />
         )}
 
+        {/* Empty state message */}
+        {widgets.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center empty-dashboard-state">
+            <div className="text-center text-gray-500 empty-message rounded-lg p-8">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <p className="text-xl font-semibold text-gray-700 mb-2">Empty Dashboard</p>
+              <p className="text-sm text-gray-500 max-w-sm">Drag widgets from the palette or click them to add to your dashboard</p>
+            </div>
+          </div>
+        )}
+
         {/* React Grid Layout */}
         <ResponsiveGridLayout
           ref={gridRef}
@@ -254,6 +260,10 @@ export const EnhancedGridLayout = ({
           layouts={layouts}
           onLayoutChange={handleLayoutChangeInternal}
           onDrop={handleDrop}
+          isDroppable={true}
+          useCSSTransforms={true}
+          compactType="vertical"
+          preventCollision={false}
         >
           {widgets.map(widget => {
             return (
