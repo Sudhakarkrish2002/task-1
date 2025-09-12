@@ -14,6 +14,10 @@ import {
   List,
   Plus
 } from 'lucide-react'
+import { 
+  handleProfessionalDragStart, 
+  handleProfessionalDragEnd 
+} from '../../lib/dragDropUtils'
 
 /**
  * Widget Palette Component with drag-and-drop support
@@ -67,28 +71,14 @@ export const WidgetPalette = ({
     }
   }, [onWidgetAdd])
 
-  // Drag start handler - OPTIMIZED FOR REACT GRID LAYOUT
+  // Professional drag start handler
   const handleDragStart = useCallback((e, widgetType) => {
-    console.log('Drag start:', widgetType)
-    setDraggedWidget(widgetType)
-    
-    // Set data for React Grid Layout
-    e.dataTransfer.effectAllowed = 'copy'
-    e.dataTransfer.setData('text/plain', widgetType)
-    
-    // Set global variable - this is what RGL onDrop uses
-    window.draggedWidgetType = widgetType
-    
-    console.log('Drag data set for RGL:', {
-      widgetType,
-      global: window.draggedWidgetType,
-      effectAllowed: e.dataTransfer.effectAllowed
-    })
+    handleProfessionalDragStart(e, widgetType, { setDraggedWidget })
   }, [])
 
-  // Handle drag end
-  const handleDragEnd = useCallback(() => {
-    setDraggedWidget(null)
+  // Professional drag end handler
+  const handleDragEnd = useCallback((e) => {
+    handleProfessionalDragEnd(e, { setDraggedWidget })
   }, [])
 
   // Widget preview components

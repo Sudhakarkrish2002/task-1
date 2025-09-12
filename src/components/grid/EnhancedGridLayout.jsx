@@ -2,6 +2,12 @@ import React, { useState, useCallback, useRef } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { AlertTriangle, CheckCircle, RotateCcw, Maximize2, Minimize2, Trash2, Copy, ChevronDown, Settings } from 'lucide-react'
 import { getGridLayoutProps } from '../../lib/gridUtils'
+import { 
+  handleProfessionalDrop, 
+  createDropZone, 
+  createDropIndicator,
+  getWidgetSize 
+} from '../../lib/dragDropUtils'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -43,6 +49,8 @@ export const EnhancedGridLayout = ({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [dropIndicator, setDropIndicator] = useState(null)
+  const [dragPosition, setDragPosition] = useState(null)
   const gridRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -99,36 +107,60 @@ export const EnhancedGridLayout = ({
     gridUtilization: widgets.length > 0 ? (widgets.reduce((acc, w) => acc + (w.w * w.h), 0) / (12 * 200)) * 100 : 0
   }
 
-  // React Grid Layout drop handler - CORRECT SIGNATURE
-  const handleDrop = useCallback((layout, layoutItem, event) => {
-    console.log('RGL Drop event triggered:', { layout, layoutItem, event })
+  // Professional drop handler with enhanced positioning
+  const handleDrop = useCallback((event) => {
+    console.log('Professional drop event triggered:', event)
     
-    // Get widget type from global variable
-    const widgetType = window.draggedWidgetType
+    // Use professional drop handling
+    handleProfessionalDrop(event, widgets, onWidgetAdd, {
+      cols: 12,
+      rowHeight: 80,
+      margin: [16, 16]
+    })
     
-    if (widgetType && onWidgetAdd) {
-      console.log('Adding widget via RGL drop:', widgetType)
-      onWidgetAdd(widgetType)
-      window.draggedWidgetType = null
-    } else {
-      console.log('No widget type found in global variable or no onWidgetAdd callback')
-    }
-    
+    // Clear visual feedback
     setIsDragOver(false)
-  }, [onWidgetAdd])
+    setDropIndicator(null)
+    setDragPosition(null)
+  }, [widgets, onWidgetAdd])
 
-  // Simple drag over handler for visual feedback
+  // Enhanced drag over handler with position tracking
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy'
     }
+    
     setIsDragOver(true)
+    
+    // Calculate drop position for visual feedback
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    setDragPosition({ x, y })
+    
+    // Create drop indicator if we have a widget type
+    const widgetType = window.draggedWidgetType
+    if (widgetType) {
+      const widgetSize = getWidgetSize(widgetType)
+      const gridX = Math.floor(x / 96) // 80 + 16 margin
+      const gridY = Math.floor(y / 96)
+      
+      setDropIndicator({
+        x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
+        y: Math.max(0, gridY),
+        w: widgetSize.w,
+        h: widgetSize.h
+      })
+    }
   }, [])
 
   const handleDragLeave = useCallback((e) => {
     if (!containerRef.current?.contains(e.relatedTarget)) {
       setIsDragOver(false)
+      setDropIndicator(null)
+      setDragPosition(null)
     }
   }, [])
 
@@ -143,8 +175,13 @@ export const EnhancedGridLayout = ({
   
   return (
     <div 
-      className={`enhanced-grid-layout relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''} ${className}`}
+      className={`enhanced-grid-layout relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''} ${className} ${isDragOver ? 'drag-over' : ''}`}
       style={style}
+      ref={containerRef}
+      onScroll={handleScroll}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
     >
       {/* Status Bar */}
       {showStatusBar && (
@@ -238,6 +275,17 @@ export const EnhancedGridLayout = ({
           />
         )}
 
+        {/* Drop Indicator */}
+        {dropIndicator && isDragOver && (
+          <div
+            className="absolute pointer-events-none drop-indicator"
+            style={createDropIndicator(dropIndicator, { w: dropIndicator.w, h: dropIndicator.h }, {
+              rowHeight: 80,
+              margin: [16, 16]
+            })}
+          />
+        )}
+
         {/* Empty state message */}
         {widgets.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center empty-dashboard-state">
@@ -259,8 +307,7 @@ export const EnhancedGridLayout = ({
           {...gridProps}
           layouts={layouts}
           onLayoutChange={handleLayoutChangeInternal}
-          onDrop={handleDrop}
-          isDroppable={true}
+          isDroppable={false}
           useCSSTransforms={true}
           compactType="vertical"
           preventCollision={false}

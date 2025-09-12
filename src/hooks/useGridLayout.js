@@ -21,7 +21,7 @@ export const useGridLayout = (options = {}) => {
     initialWidgets = [],
     initialLayouts = {},
     gridCols = 12,
-    maxRows = 200,
+    maxRows = 1000, // Increased to allow more widgets at the bottom
     enableOverlapPrevention = true,
     enableAutoFix = true,
     debounceMs = 300
@@ -100,13 +100,29 @@ export const useGridLayout = (options = {}) => {
     }
   }, [widgets, debouncedValidate])
 
-  // Widget addition
+  // Widget addition with enhanced positioning
   const addWidget = useCallback((widgetType, widgetOptions = {}) => {
     if (!widgetType) {
       return null
     }
 
-    const newWidget = createWidget(widgetType, widgets, widgetOptions)
+    // Use custom position if provided (from professional drag and drop)
+    const newWidget = widgetOptions.position 
+      ? {
+          i: generateWidgetId(),
+          type: widgetType,
+          x: widgetOptions.position.x,
+          y: widgetOptions.position.y,
+          w: getWidgetSize(widgetType).w,
+          h: getWidgetSize(widgetType).h,
+          minW: 1,
+          minH: 1,
+          maxW: 12,
+          maxH: 10,
+          static: false,
+          ...widgetOptions
+        }
+      : createWidget(widgetType, widgets, widgetOptions)
     
     setWidgets(prev => {
       const updatedWidgets = [...prev, newWidget]

@@ -452,42 +452,37 @@ export default function DashboardContainer() {
       {/* Dashboard Container */}
       {(!isSharedAccess || (isSharedAccess && isAuthenticated)) && (
         <div className="flex-1 overflow-auto p-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            {/* Dashboard Content */}
-            <div className="p-6">
-              {memoizedPanel.widgets && memoizedPanel.widgets.length > 0 ? (
-                <div className="min-h-[800px] pb-8">
-                  <EnhancedGridLayout
-                    widgets={fixWidgetMinMaxValues(memoizedPanel.widgets)}
-                    layouts={fixLayoutMinMaxValues(memoizedPanel.layout || { lg: memoizedPanel.widgets })}
-                    renderWidget={renderWidget}
-                    isPreviewMode={true}
-                    showGridBackground={false}
-                    showStatusBar={false}
-                    className="dashboard-view"
-                    style={{ minHeight: '100%', height: 'auto' }}
-                  />
-                </div>
-              ) : (
-                <div className="min-h-[600px] flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium mb-2">No Widgets Found</h3>
-                    <p className="text-sm mb-4">This dashboard doesn't have any widgets yet.</p>
-                    {!isSharedAccess && (
-                      <Button
-                        onClick={handleEditPanel}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Add Widgets
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+          {memoizedPanel.widgets && memoizedPanel.widgets.length > 0 ? (
+            <div className="min-h-[800px] pb-8">
+              <EnhancedGridLayout
+                widgets={fixWidgetMinMaxValues(memoizedPanel.widgets)}
+                layouts={fixLayoutMinMaxValues(memoizedPanel.layout || { lg: memoizedPanel.widgets })}
+                renderWidget={renderWidget}
+                isPreviewMode={true}
+                showGridBackground={false}
+                showStatusBar={false}
+                className="dashboard-view"
+                style={{ minHeight: '100%', height: 'auto' }}
+              />
             </div>
-          </div>
+          ) : (
+            <div className="min-h-[600px] flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium mb-2">No Widgets Found</h3>
+                <p className="text-sm mb-4">This dashboard doesn't have any widgets yet.</p>
+                {!isSharedAccess && (
+                  <Button
+                    onClick={handleEditPanel}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Add Widgets
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -84,13 +84,15 @@ export const findNextAvailablePosition = (widgets, newWidgetSize, gridCols = 12,
   })
   
   // Find the first available position that can fit the new widget
-  for (let y = 0; y < maxRows - newWidgetSize.h + 1; y++) {
+  // Allow placement at the very bottom by extending the search range
+  for (let y = 0; y < maxRows; y++) {
     for (let x = 0; x < gridCols - newWidgetSize.w + 1; x++) {
       // Check if the area is free
       let canPlace = true
       for (let dy = 0; dy < newWidgetSize.h; dy++) {
         for (let dx = 0; dx < newWidgetSize.w; dx++) {
-          if (y + dy >= maxRows || x + dx >= gridCols || grid[y + dy][x + dx]) {
+          // Allow extending beyond maxRows for bottom placement
+          if (x + dx >= gridCols || (y + dy < maxRows && grid[y + dy][x + dx])) {
             canPlace = false
             break
           }
@@ -298,12 +300,12 @@ export const GRID_CONFIG = {
   rowHeight: 80,
   margin: [16, 16],
   containerPadding: [16, 16, 32, 16], // Add bottom padding to ensure widgets are visible
-  maxRows: 200,
+  maxRows: 1000, // Increased to allow more widgets at the bottom
   preventCollision: true,
   compactType: 'vertical',
   autoSize: true,
   allowOverlap: false,
-  isBounded: true
+  isBounded: false // Allow unbounded growth for bottom placement
 }
 
 /**
@@ -323,7 +325,7 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   compactType: null, // Disable compacting to maintain positions
   autoSize: true,
   allowOverlap: false,
-  isBounded: true,
+  isBounded: false, // Allow unbounded growth for bottom placement
   resizeHandles: isPreviewMode ? [] : ['se'],
   maxRows: GRID_CONFIG.maxRows,
   droppingItem: { i: '__dropping-elem__', w: 3, h: 3, minW: 1, minH: 1, maxW: 12, maxH: 10 },
@@ -331,7 +333,7 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   cols: GRID_CONFIG.cols,
   // Ensure widgets stay within bounds
   isDroppable: !isPreviewMode,
-  // Prevent widgets from extending beyond container
+  // Allow dynamic height expansion for bottom placement
   style: { 
     width: '100%',
     minHeight: '100%',
