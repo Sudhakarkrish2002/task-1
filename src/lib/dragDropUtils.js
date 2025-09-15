@@ -27,13 +27,20 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
   const clampedY = Math.max(0, gridY)
   
+  console.log('Calculating position for widget:', widgetSize, 'at drop coords:', dropData, 'grid coords:', { x: clampedX, y: clampedY })
+  console.log('Existing widgets:', existingWidgets)
+  
   // Check if position is available
   if (isPositionAvailable(clampedX, clampedY, widgetSize, existingWidgets)) {
+    console.log('Position is available, using:', { x: clampedX, y: clampedY })
     return { x: clampedX, y: clampedY }
   }
   
   // If position is occupied, find nearest available position
-  return findNearestAvailablePosition(clampedX, clampedY, widgetSize, existingWidgets, cols)
+  console.log('Position is occupied, finding nearest available position')
+  const nearestPosition = findNearestAvailablePosition(clampedX, clampedY, widgetSize, existingWidgets, cols)
+  console.log('Nearest available position:', nearestPosition)
+  return nearestPosition
 }
 
 /**
@@ -165,14 +172,14 @@ export const handleProfessionalDrop = (event, existingWidgets, onWidgetAdd, grid
  */
 export const getWidgetSize = (widgetType) => {
   const sizes = {
-    'chart': { w: 6, h: 4 },
+    'chart': { w: 4, h: 4 },
     'gauge': { w: 3, h: 3 },
-    'map': { w: 8, h: 6 },
-    'sensor': { w: 3, h: 2 },
+    'map': { w: 6, h: 5 },
+    'sensor-tile': { w: 3, h: 3 },
     'toggle': { w: 2, h: 2 },
-    'slider': { w: 4, h: 2 },
-    'notification': { w: 4, h: 5 },
-    'model3d': { w: 4, h: 4 }
+    'slider': { w: 3, h: 3 },
+    'notification': { w: 3, h: 4 },
+    '3d-model': { w: 4, h: 4 }
   }
   
   return sizes[widgetType] || { w: 3, h: 3 }

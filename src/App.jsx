@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy, useEffect } from 'react'
+import { useState, Suspense, lazy, useEffect, startTransition } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { 
   User,
@@ -13,13 +13,17 @@ import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import ChatBot from './components/ChatBot'
 import { useNavigation } from './hooks/useNavigation'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ToastProvider, useToast } from './contexts/ToastContext'
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'))
 const MyPanels = lazy(() => import('./pages/MyPanels'))
 const CreatePanel = lazy(() => import('./pages/CreatePanel'))
-const DashboardContainer = lazy(() => import('./pages/DashboardContainer'))
 const SignIn = lazy(() => import('./pages/SignIn'))
+const SignUp = lazy(() => import('./pages/SignUp'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const SharedDashboardView = lazy(() => import('./components/SharedDashboardView'))
 
 // Feature pages
@@ -37,29 +41,16 @@ function SharedDashboardRoute() {
   )
 }
 
-function App() {
+function AppContent() {
   const navigate = useNavigate()
   const location = useLocation()
   const { handleNavigation } = useNavigation()
-  const [user, setUser] = useState(null)
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { showSuccess } = useToast()
   const [mqttStatus, setMqttStatus] = useState('disconnected')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
-  // Check authentication on app load
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user')
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser)
-        setUser(userData)
-        console.log('User authenticated:', userData.email)
-      } catch (error) {
-        console.error('Error parsing user data:', error)
-        localStorage.removeItem('user')
-      }
-    }
-  }, [])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -86,7 +77,7 @@ function App() {
 
   // Initialize MQTT connection (disabled for now - using random data only)
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated && user) {
       // For now, just set status as connected for UI display
       setMqttStatus('connected')
       
@@ -95,16 +86,17 @@ function App() {
       //   console.log('Real MQTT broker not available, using simulation')
       //   mqttService.simulateConnection()
       // })
+    } else {
+      setMqttStatus('disconnected')
     }
-  }, [user])
+  }, [isAuthenticated, user])
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem('user')
-    setUser(null)
+    logout()
     setMqttStatus('disconnected')
+    showSuccess('Logged out successfully')
     // mqttService.disconnect() // TODO: Enable when MQTT is active
-    navigate('/signin')
   }
 
 
@@ -116,19 +108,8 @@ function App() {
     { id: 'contact', label: 'Contact', icon: MessageCircle, path: '/contact' },
   ]
 
-  // If user is not authenticated and not on signin page or shared dashboard, redirect to signin
-  if (!user && location.pathname !== '/signin' && !location.pathname.startsWith('/shared/')) {
-    return <SignIn />
-  }
-
-  // If user is authenticated and on signin page, redirect to home
-  if (user && location.pathname === '/signin') {
-    navigate('/home')
-    return null
-  }
-
   // Show loading while checking authentication
-  if (user === null && location.pathname !== '/signin' && !location.pathname.startsWith('/shared/')) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -138,6 +119,28 @@ function App() {
         </div>
       </div>
     )
+  }
+
+  // If user is not authenticated and not on auth pages or shared dashboard, redirect to signin
+  if (!isAuthenticated && 
+      location.pathname !== '/signin' && 
+      location.pathname !== '/signup' && 
+      location.pathname !== '/forgot-password' && 
+      location.pathname !== '/reset-password' && 
+      !location.pathname.startsWith('/shared/')) {
+    return <SignIn />
+  }
+
+  // If user is authenticated and on auth pages, redirect to home
+  if (isAuthenticated && (
+      location.pathname === '/signin' || 
+      location.pathname === '/signup' || 
+      location.pathname === '/forgot-password' || 
+      location.pathname === '/reset-password')) {
+    startTransition(() => {
+      navigate('/home', { replace: true })
+    })
+    return null
   }
 
 
@@ -273,9 +276,10 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/panels" element={<MyPanels />} />
             <Route path="/create" element={<CreatePanel />} />
-            <Route path="/dashboard-container" element={<DashboardContainer />} />
-            <Route path="/dashboard" element={<DashboardContainer />} />
             <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/shared/:panelId" element={<SharedDashboardRoute />} />
           </Routes>
           </Suspense>
@@ -285,6 +289,16 @@ function App() {
       {/* Global ChatBot */}
       <ChatBot />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   )
 }
 

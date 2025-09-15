@@ -57,11 +57,12 @@ export const findNextAvailablePosition = (widgets, newWidgetSize, gridCols = 12,
   }
   
   // For the first few widgets, place them in a visible area
-  if (widgets.length < 3) {
+  if (widgets.length < 4) {
     const positions = [
       { x: 0, y: 0 },
       { x: 4, y: 0 },
-      { x: 8, y: 0 }
+      { x: 8, y: 0 },
+      { x: 0, y: 3 } // Start placing widgets in the next row
     ]
     const position = positions[widgets.length]
     return position
@@ -108,7 +109,8 @@ export const findNextAvailablePosition = (widgets, newWidgetSize, gridCols = 12,
   
   // If no position found in the grid, place at the bottom with some spacing
   const maxY = Math.max(...widgets.map(w => (w.y || 0) + (w.h || 1)))
-  return { x: 0, y: maxY + 1 } // Add extra row spacing
+  console.log('No available position found, placing at bottom. Max Y:', maxY)
+  return { x: 0, y: maxY + 2 } // Add extra row spacing for better visibility
 }
 
 /**
@@ -125,26 +127,60 @@ export const autoFixOverlaps = (widgets, gridCols = 12) => {
   
   if (overlaps.length === 0) return fixedWidgets
   
-  // Sort widgets by y position to maintain order
-  fixedWidgets.sort((a, b) => a.y - b.y)
+  console.log('Auto-fixing overlaps:', overlaps)
+  
+  // Sort widgets by y position, then by x position to maintain order
+  fixedWidgets.sort((a, b) => {
+    if (a.y !== b.y) return a.y - b.y
+    return a.x - b.x
+  })
   
   // Fix overlaps by repositioning conflicting widgets
   for (let i = 0; i < fixedWidgets.length; i++) {
     const currentWidget = fixedWidgets[i]
     
-    // Check for overlaps with previous widgets
-    for (let j = 0; j < i; j++) {
-      const previousWidget = fixedWidgets[j]
+    // Check for overlaps with all other widgets
+    for (let j = 0; j < fixedWidgets.length; j++) {
+      if (i === j) continue
       
-      if (checkCollision(currentWidget, previousWidget)) {
-        // Move current widget to the right of the previous widget
-        const newX = previousWidget.x + previousWidget.w
+      const otherWidget = fixedWidgets[j]
+      
+      if (checkCollision(currentWidget, otherWidget)) {
+        console.log(`Fixing overlap between ${currentWidget.i} and ${otherWidget.i}`)
+        
+        // Try to move current widget to the right first
+        const newX = otherWidget.x + otherWidget.w
         if (newX + currentWidget.w <= gridCols) {
           currentWidget.x = newX
+          console.log(`Moved ${currentWidget.i} to x: ${newX}`)
         } else {
-          // Move to next row
+          // Try to move to the next row
+          const newY = otherWidget.y + otherWidget.h
           currentWidget.x = 0
-          currentWidget.y = previousWidget.y + previousWidget.h
+          currentWidget.y = newY
+          console.log(`Moved ${currentWidget.i} to next row: x: 0, y: ${newY}`)
+        }
+        
+        // Re-check for overlaps after moving
+        let stillOverlapping = false
+        for (let k = 0; k < fixedWidgets.length; k++) {
+          if (i === k) continue
+          if (checkCollision(currentWidget, fixedWidgets[k])) {
+            stillOverlapping = true
+            break
+          }
+        }
+        
+        // If still overlapping, try a different position
+        if (stillOverlapping) {
+          const nextAvailablePosition = findNextAvailablePosition(
+            fixedWidgets.filter((_, index) => index !== i), 
+            { w: currentWidget.w, h: currentWidget.h }, 
+            gridCols
+          )
+          currentWidget.x = nextAvailablePosition.x
+          currentWidget.y = nextAvailablePosition.y
+          console.log(`Moved ${currentWidget.i} to available position: x: ${nextAvailablePosition.x}, y: ${nextAvailablePosition.y}`)
         }
       }
     }
@@ -169,17 +205,17 @@ export const generateWidgetId = (prefix = 'widget') => {
  */
 export const getWidgetSize = (widgetType) => {
   const sizeMap = {
-    'gauge': { w: 3, h: 3 },
-    'chart': { w: 4, h: 4 },
-    'toggle': { w: 2, h: 2 },
-    'slider': { w: 3, h: 3 },
-    'map': { w: 6, h: 5 },
-    '3d-model': { w: 4, h: 4 },
-    'notification': { w: 3, h: 4 },
-    'sensor-tile': { w: 3, h: 3 }
+    'gauge': { w: 3, h: 3, minW: 2, minH: 2 },
+    'chart': { w: 4, h: 4, minW: 3, minH: 3 },
+    'toggle': { w: 2, h: 2, minW: 2, minH: 2 },
+    'slider': { w: 3, h: 3, minW: 2, minH: 2 },
+    'map': { w: 6, h: 5, minW: 4, minH: 4 },
+    '3d-model': { w: 4, h: 4, minW: 3, minH: 3 },
+    'notification': { w: 3, h: 4, minW: 2, minH: 3 },
+    'sensor-tile': { w: 3, h: 3, minW: 2, minH: 2 }
   }
   
-  return sizeMap[widgetType] || { w: 3, h: 3 }
+  return sizeMap[widgetType] || { w: 3, h: 3, minW: 2, minH: 2 }
 }
 
 /**
@@ -241,7 +277,7 @@ export const createWidget = (widgetType, existingWidgets = [], options = {}) => 
     value: 50,
     color: '#3b82f6',
     status: false,
-    location: 'Device Location',
+    location: widgetType === 'toggle' ? undefined : 'Device Location', // Remove location for toggle widgets
     unit: '',
     chartType: 'line',
     modelType: 'cube'
@@ -254,8 +290,8 @@ export const createWidget = (widgetType, existingWidgets = [], options = {}) => 
     y: position.y,
     w: size.w,
     h: size.h,
-    minW: 1, // Always allow minimum width of 1
-    minH: 1, // Always allow minimum height of 1
+    minW: size.minW || 2, // Use widget-specific minimum width
+    minH: size.minH || 2, // Use widget-specific minimum height
     maxW: 12, // Allow maximum width of 12 (full grid)
     maxH: 10, // Allow maximum height of 10
     static: false,
@@ -338,15 +374,15 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   isDraggable: !isPreviewMode,
   isResizable: !isPreviewMode,
   margin: GRID_CONFIG.margin,
-  containerPadding: GRID_CONFIG.containerPadding,
+  containerPadding: isPreviewMode ? [20, 20, 40, 20] : GRID_CONFIG.containerPadding,
   useCSSTransforms: true,
   transformScale: 1,
   draggableHandle: null, // Allow dragging from anywhere on the widget
-  preventCollision: false, // Disable preventCollision to allow manual positioning
-  compactType: null, // Disable compacting to maintain positions
-  autoSize: true,
-  allowOverlap: false,
-  isBounded: false, // Allow unbounded growth for bottom placement
+  preventCollision: GRID_CONFIG.preventCollision, // Use config value
+  compactType: GRID_CONFIG.compactType, // Use config value
+  autoSize: isPreviewMode ? false : GRID_CONFIG.autoSize, // Disable autoSize in preview mode
+  allowOverlap: GRID_CONFIG.allowOverlap,
+  isBounded: isPreviewMode ? false : GRID_CONFIG.isBounded, // Allow unbounded in preview mode for better viewing
   resizeHandles: isPreviewMode ? [] : ['se'],
   maxRows: GRID_CONFIG.maxRows,
   droppingItem: { i: '__dropping-elem__', w: 3, h: 3, minW: 1, minH: 1, maxW: 12, maxH: 10 },
@@ -357,9 +393,10 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   // Allow dynamic height expansion for bottom placement
   style: { 
     width: '100%',
-    minHeight: '100%',
-    height: 'auto',
-    overflow: 'visible'
+    minHeight: isPreviewMode ? '600px' : '100%',
+    height: isPreviewMode ? 'auto' : 'auto',
+    overflow: isPreviewMode ? 'visible' : 'visible',
+    background: 'transparent' // Remove any background for cleaner look
   }
 })
 

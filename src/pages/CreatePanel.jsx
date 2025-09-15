@@ -101,10 +101,20 @@ function CreatePanel() {
   // Handle widget settings save
   const handleWidgetSettingsSave = useCallback(() => {
     if (selectedWidget && currentPanel) {
+      // Determine the final data channel ID
+      const finalDataChannelId = widgetSettings.dataChannelId === -1 
+        ? widgetSettings.customDataChannelId || 0 
+        : widgetSettings.dataChannelId
+      
+      const finalWidgetSettings = {
+        ...widgetSettings,
+        dataChannelId: finalDataChannelId
+      }
+      
       const updatedWidgets = currentPanel.widgets.map(w => 
         w.i === selectedWidget.i ? { 
           ...w, 
-          ...widgetSettings 
+          ...finalWidgetSettings 
         } : w
       )
       
@@ -114,13 +124,13 @@ function CreatePanel() {
       })
       
       // Update the selected widget state
-      setSelectedWidget({ ...selectedWidget, ...widgetSettings })
+      setSelectedWidget({ ...selectedWidget, ...finalWidgetSettings })
       
       // Update the grid widgets immediately
       const updateEvent = new CustomEvent('updateGridWidget', {
         detail: { 
           widgetId: selectedWidget.i, 
-          updates: widgetSettings 
+          updates: finalWidgetSettings 
         }
       })
       window.dispatchEvent(updateEvent)
@@ -179,7 +189,7 @@ function CreatePanel() {
           <ToggleWidget
             name={widget.title || 'Toggle'}
             status={widget.status || false}
-            location={widget.location || 'Device Location'}
+            widgetId={widget.i}
           />
         )
       case 'sensor-tile':
@@ -256,14 +266,8 @@ function CreatePanel() {
         alert('New dashboard created and saved successfully!')
       }
       
-      // Redirect to the dashboard after saving
-      if (savedPanel && savedPanel.id) {
-        const redirectUrl = `/dashboard-container?panel=${savedPanel.id}`
-        console.log('Redirecting to:', redirectUrl)
-        handleNavigation(redirectUrl)
-      } else {
-        console.log('No savedPanel or ID, not redirecting. savedPanel:', savedPanel)
-      }
+      // Stay on the create page after saving
+      console.log('Panel saved successfully, staying on create page')
     } catch (error) {
       console.error('Error saving dashboard:', error)
       alert('Failed to save dashboard. Please try again.')
@@ -571,19 +575,32 @@ function CreatePanel() {
                 {/* 6. Data Channel ID */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data Channel ID</label>
-                  <select
-                    value={widgetSettings.dataChannelId || 0}
-                    onChange={(e) => setWidgetSettings({ ...widgetSettings, dataChannelId: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  >
-                    <option value={0}>Channel 0</option>
-                    <option value={1}>Channel 1</option>
-                    <option value={2}>Channel 2</option>
-                    <option value={3}>Channel 3</option>
-                    <option value={4}>Channel 4</option>
-                    <option value={5}>Channel 5</option>
-                    <option value={6}>Channel 6</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={widgetSettings.dataChannelId || 0}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, dataChannelId: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    >
+                      <option value={0}>Channel 0</option>
+                      <option value={1}>Channel 1</option>
+                      <option value={2}>Channel 2</option>
+                      <option value={3}>Channel 3</option>
+                      <option value={4}>Channel 4</option>
+                      <option value={5}>Channel 5</option>
+                      <option value={6}>Channel 6</option>
+                      <option value={-1}>Manual Entry</option>
+                    </select>
+                    {widgetSettings.dataChannelId === -1 && (
+                      <input
+                        type="number"
+                        value={widgetSettings.customDataChannelId || ''}
+                        onChange={(e) => setWidgetSettings({ ...widgetSettings, customDataChannelId: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder="Enter custom channel ID"
+                        min="0"
+                      />
+                    )}
+                  </div>
                 </div>
                 
                 

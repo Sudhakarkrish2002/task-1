@@ -120,22 +120,23 @@ export const useGridLayout = (options = {}) => {
       value: 50,
       color: '#3b82f6',
       status: false,
-      location: 'Device Location',
+      location: widgetType === 'toggle' ? undefined : 'Device Location', // Remove location for toggle widgets
       unit: '',
       chartType: 'line',
       modelType: 'cube'
     }
     
+    const widgetSize = getWidgetSize(widgetType)
     const newWidget = widgetOptions.position 
       ? {
           i: generateWidgetId(),
           type: widgetType,
           x: widgetOptions.position.x,
           y: widgetOptions.position.y,
-          w: getWidgetSize(widgetType).w,
-          h: getWidgetSize(widgetType).h,
-          minW: 1,
-          minH: 1,
+          w: widgetSize.w,
+          h: widgetSize.h,
+          minW: widgetSize.minW || 2,
+          minH: widgetSize.minH || 2,
           maxW: 12,
           maxH: 10,
           static: false,
@@ -147,12 +148,22 @@ export const useGridLayout = (options = {}) => {
     setWidgets(prev => {
       const updatedWidgets = [...prev, newWidget]
       
-      // Validate immediately for new widgets
+      // Validate immediately for new widgets - ALWAYS run overlap prevention
       if (enableOverlapPrevention) {
         const detectedOverlaps = validateWidgetPositions(updatedWidgets)
-        if (detectedOverlaps.length > 0 && enableAutoFix) {
-          const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
-          return fixedWidgets
+        console.log('Overlap detection for new widget:', detectedOverlaps)
+        
+        if (detectedOverlaps.length > 0) {
+          console.log('Overlaps detected, applying auto-fix')
+          if (enableAutoFix) {
+            const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
+            console.log('Fixed widgets:', fixedWidgets)
+            return fixedWidgets
+          } else {
+            console.warn('Overlaps detected but auto-fix is disabled')
+          }
+        } else {
+          console.log('No overlaps detected')
         }
       }
       
@@ -213,15 +224,48 @@ export const useGridLayout = (options = {}) => {
     const widgetToDuplicate = widgets.find(w => w.i === widgetId)
     if (!widgetToDuplicate) return null
 
+    // Debug: Log the widget being duplicated to see its current size
+    console.log('Duplicating widget:', {
+      id: widgetToDuplicate.i,
+      type: widgetToDuplicate.type,
+      currentSize: { w: widgetToDuplicate.w, h: widgetToDuplicate.h },
+      minMax: { 
+        minW: widgetToDuplicate.minW, 
+        minH: widgetToDuplicate.minH,
+        maxW: widgetToDuplicate.maxW, 
+        maxH: widgetToDuplicate.maxH 
+      }
+    })
+
     const duplicatedWidget = {
       ...widgetToDuplicate,
       i: generateWidgetId(),
       title: `${widgetToDuplicate.title || widgetToDuplicate.type} (Copy)`,
       x: 0, // Will be repositioned by findNextAvailablePosition
-      y: 0
+      y: 0,
+      // Preserve the current size (w, h) and min/max constraints
+      w: widgetToDuplicate.w,
+      h: widgetToDuplicate.h,
+      minW: widgetToDuplicate.minW,
+      minH: widgetToDuplicate.minH,
+      maxW: widgetToDuplicate.maxW,
+      maxH: widgetToDuplicate.maxH
     }
 
-    // Find a new position for the duplicated widget
+    // Debug: Log the duplicated widget to verify size preservation
+    console.log('Duplicated widget created:', {
+      id: duplicatedWidget.i,
+      type: duplicatedWidget.type,
+      size: { w: duplicatedWidget.w, h: duplicatedWidget.h },
+      minMax: { 
+        minW: duplicatedWidget.minW, 
+        minH: duplicatedWidget.minH,
+        maxW: duplicatedWidget.maxW, 
+        maxH: duplicatedWidget.maxH 
+      }
+    })
+
+    // Find a new position for the duplicated widget using its current size
     const position = findNextAvailablePosition(widgets, {
       w: duplicatedWidget.w,
       h: duplicatedWidget.h
@@ -231,6 +275,33 @@ export const useGridLayout = (options = {}) => {
     duplicatedWidget.y = position.y
 
     setWidgets(prev => [...prev, duplicatedWidget])
+    
+    // Update layouts to include the duplicated widget
+    setLayouts(prevLayouts => {
+      const newLayouts = { ...prevLayouts }
+      Object.keys(newLayouts).forEach(breakpoint => {
+        if (!newLayouts[breakpoint]) {
+          newLayouts[breakpoint] = []
+        }
+        const layoutItem = {
+          i: duplicatedWidget.i,
+          x: duplicatedWidget.x,
+          y: duplicatedWidget.y,
+          w: duplicatedWidget.w,
+          h: duplicatedWidget.h,
+          minW: duplicatedWidget.minW,
+          minH: duplicatedWidget.minH,
+          maxW: duplicatedWidget.maxW,
+          maxH: duplicatedWidget.maxH
+        }
+        newLayouts[breakpoint].push(layoutItem)
+        
+        // Debug: Log layout update for the duplicated widget
+        console.log(`Layout updated for ${breakpoint}:`, layoutItem)
+      })
+      return newLayouts
+    })
+    
     setSelectedWidget(duplicatedWidget)
     return duplicatedWidget
   }, [widgets, gridCols, maxRows])
@@ -239,21 +310,54 @@ export const useGridLayout = (options = {}) => {
   const onLayoutChange = useCallback((layout, layouts) => {
     setLayouts(layouts)
     
-    // Update widget positions
-    setWidgets(prev => prev.map(widget => {
-      const layoutItem = layout.find(item => item.i === widget.i)
-      if (layoutItem) {
-        return {
-          ...widget,
-          x: layoutItem.x,
-          y: layoutItem.y,
-          w: layoutItem.w,
-          h: layoutItem.h
+    // Update widget positions and sizes
+    setWidgets(prev => {
+      const updatedWidgets = prev.map(widget => {
+        const layoutItem = layout.find(item => item.i === widget.i)
+        if (layoutItem) {
+          // Debug: Log size changes to see if resize is captured
+          if (widget.w !== layoutItem.w || widget.h !== layoutItem.h) {
+            console.log('Widget resize detected:', {
+              id: widget.i,
+              type: widget.type,
+              oldSize: { w: widget.w, h: widget.h },
+              newSize: { w: layoutItem.w, h: layoutItem.h }
+            })
+          }
+          
+          return {
+            ...widget,
+            x: layoutItem.x,
+            y: layoutItem.y,
+            w: layoutItem.w,
+            h: layoutItem.h
+          }
+        }
+        return widget
+      })
+      
+      // Check for overlaps after layout changes (resize/move operations)
+      if (enableOverlapPrevention) {
+        const detectedOverlaps = validateWidgetPositions(updatedWidgets)
+        console.log('Layout change overlap detection:', detectedOverlaps)
+        
+        if (detectedOverlaps.length > 0) {
+          console.log('Overlaps detected after layout change, applying auto-fix')
+          if (enableAutoFix) {
+            const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
+            console.log('Fixed widgets after layout change:', fixedWidgets)
+            return fixedWidgets
+          } else {
+            console.warn('Overlaps detected after layout change but auto-fix is disabled')
+          }
+        } else {
+          console.log('No overlaps detected after layout change')
         }
       }
-      return widget
-    }))
-  }, [])
+      
+      return updatedWidgets
+    })
+  }, [enableOverlapPrevention, enableAutoFix, gridCols])
 
   // Move widget to a specific position
   const moveWidget = useCallback((widgetId, newPosition) => {
@@ -265,7 +369,25 @@ export const useGridLayout = (options = {}) => {
   const resizeWidget = useCallback((widgetId, newSize) => {
     const { w, h } = newSize
     updateWidget(widgetId, { w, h })
-  }, [updateWidget])
+    
+    // Trigger overlap validation after resize
+    setTimeout(() => {
+      setWidgets(prev => {
+        if (enableOverlapPrevention) {
+          const detectedOverlaps = validateWidgetPositions(prev)
+          console.log('Resize overlap detection:', detectedOverlaps)
+          
+          if (detectedOverlaps.length > 0 && enableAutoFix) {
+            console.log('Overlaps detected after resize, applying auto-fix')
+            const fixedWidgets = autoFixOverlaps(prev, gridCols)
+            console.log('Fixed widgets after resize:', fixedWidgets)
+            return fixedWidgets
+          }
+        }
+        return prev
+      })
+    }, 100) // Small delay to ensure the resize is complete
+  }, [updateWidget, enableOverlapPrevention, enableAutoFix, gridCols])
 
   // Clear all widgets
   const clearWidgets = useCallback(() => {

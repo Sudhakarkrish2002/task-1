@@ -183,8 +183,8 @@ export const EnhancedGridLayout = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      {/* Status Bar */}
-      {showStatusBar && (
+      {/* Status Bar - Only show in edit mode, not in dashboard view */}
+      {showStatusBar && !isDashboardView && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 border-b border-gray-200 gap-3 sm:gap-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -233,8 +233,8 @@ export const EnhancedGridLayout = ({
         </div>
       )}
 
-      {/* Drag Over Indicator */}
-      {isDragOver && (
+      {/* Drag Over Indicator - Only show when no widgets exist */}
+      {isDragOver && widgets.length === 0 && (
         <div className="absolute inset-0 bg-red-50 border-2 border-dashed border-red-400 z-10 flex items-center justify-center">
           <div className="text-center px-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse">
@@ -249,13 +249,23 @@ export const EnhancedGridLayout = ({
         </div>
       )}
 
+      {/* Drag Over Indicator for existing widgets - Show subtle border only */}
+      {isDragOver && widgets.length > 0 && (
+        <div className="absolute inset-0 border-2 border-dashed border-red-400 pointer-events-none" style={{ zIndex: 1 }}>
+          <div className="absolute top-4 left-4 bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm font-medium shadow-lg">
+            Drop widget here
+          </div>
+        </div>
+      )}
+
       {/* Grid Container */}
       <div 
         ref={containerRef}
-        className={`relative flex-1 ${isDashboardView ? 'overflow-visible' : 'overflow-auto'}`}
+        className={`relative flex-1 ${isDashboardView ? 'overflow-auto' : 'overflow-auto'}`}
         style={{ 
           minHeight: isDashboardView ? '400px' : '400px', 
-          height: isDashboardView ? 'auto' : '100%' 
+          height: isDashboardView ? '100%' : '100%',
+          maxHeight: isDashboardView ? 'calc(100vh - 200px)' : '100%'
         }}
         onScroll={isDashboardView ? undefined : handleScroll}
         onDragOver={handleDragOver}
@@ -279,7 +289,7 @@ export const EnhancedGridLayout = ({
         {/* Drop Indicator */}
         {dropIndicator && isDragOver && (
           <div
-            className="absolute pointer-events-none drop-indicator"
+            className="absolute pointer-events-none drop-indicator z-20"
             style={createDropIndicator(dropIndicator, { w: dropIndicator.w, h: dropIndicator.h }, {
               rowHeight: 80,
               margin: [16, 16]
@@ -309,9 +319,6 @@ export const EnhancedGridLayout = ({
           layouts={layouts}
           onLayoutChange={handleLayoutChangeInternal}
           isDroppable={false}
-          useCSSTransforms={true}
-          compactType="vertical"
-          preventCollision={false}
         >
           {widgets.map(widget => {
             return (
@@ -333,8 +340,8 @@ export const EnhancedGridLayout = ({
                   )}
                 </div>
                 
-                {/* Widget Control Buttons - Show on hover or when selected */}
-                {!isPreviewMode && (
+                {/* Widget Control Buttons - Show on hover or when selected, but not in dashboard view */}
+                {!isPreviewMode && !isDashboardView && (
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
                     {onWidgetSettings && (
                       <button

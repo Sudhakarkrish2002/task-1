@@ -10,7 +10,6 @@ import {
   Copy, 
   Trash2, 
   Share2, 
-  Eye,
   Calendar,
   Users,
   Settings,
@@ -71,9 +70,6 @@ function MyPanels() {
     }
   }
 
-  const handleViewPanel = (panel) => {
-    handleNavigation(`/dashboard-container?panel=${panel.id}`)
-  }
 
   const handleEditPanel = (panel) => {
     handleNavigation(`/create?edit=${panel.id}`)
@@ -268,14 +264,7 @@ function MyPanels() {
                 </div>
                 
                 {/* Mobile Button Layout */}
-                <div className="block sm:hidden space-y-3">
-                  <button 
-                    onClick={() => handleViewPanel(panel)}
-                    className="w-full flex items-center justify-center px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Panel
-                  </button>
+                <div className="block sm:hidden">
                   <div className="grid grid-cols-4 gap-2">
                     <button 
                       onClick={() => handleEditPanel(panel)}
@@ -311,18 +300,11 @@ function MyPanels() {
                 {/* Desktop Button Layout */}
                 <div className="hidden sm:flex items-center space-x-2">
                   <button 
-                    onClick={() => handleViewPanel(panel)}
+                    onClick={() => handleEditPanel(panel)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                   >
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </button>
-                  <button 
-                    onClick={() => handleEditPanel(panel)}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    title="Edit Panel"
-                  >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
                   </button>
                   <button 
                     onClick={() => handleDuplicatePanel(panel)}
@@ -385,13 +367,6 @@ function MyPanels() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handleViewPanel(panel)}
-                          className="text-red-600 hover:text-red-900"
-                          title="View Panel"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                         <button 
                           onClick={() => handleEditPanel(panel)}
                           className="text-blue-600 hover:text-blue-900"

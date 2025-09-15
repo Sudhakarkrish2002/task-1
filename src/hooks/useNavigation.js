@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom'
+import { startTransition } from 'react'
 
 export const useNavigation = () => {
   const navigate = useNavigate()
 
   const navigateWithScrollToTop = (path, options = {}) => {
-    navigate(path, options)
+    startTransition(() => {
+      navigate(path, options)
+    })
     
     // Ensure scroll to top happens after navigation
     setTimeout(() => {
