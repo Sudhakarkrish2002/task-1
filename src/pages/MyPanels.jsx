@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNavigation } from '../hooks/useNavigation'
 import { 
   Plus, 
   Search, 
@@ -12,7 +13,9 @@ import {
   Eye,
   Calendar,
   Users,
-  Settings
+  Settings,
+  Grid3X3,
+  List
 } from 'lucide-react'
 import { usePanels, usePanelActions, usePanelStore } from '../stores/usePanelStore'
 import PanelSharing from '../components/panels/PanelSharing'
@@ -20,6 +23,7 @@ import CreateDashboardModal from '../components/CreateDashboardModal'
 
 function MyPanels() {
   const navigate = useNavigate()
+  const { handleNavigation } = useNavigation()
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'table'
   const [showSharingModal, setShowSharingModal] = useState(false)
@@ -68,11 +72,11 @@ function MyPanels() {
   }
 
   const handleViewPanel = (panel) => {
-    navigate(`/dashboard-container?panel=${panel.id}`)
+    handleNavigation(`/dashboard-container?panel=${panel.id}`)
   }
 
   const handleEditPanel = (panel) => {
-    navigate(`/create?edit=${panel.id}`)
+    handleNavigation(`/create?edit=${panel.id}`)
   }
 
   const handleDuplicatePanel = (panel) => {
@@ -140,26 +144,58 @@ function MyPanels() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Panels</h1>
-            <p className="text-gray-600 mt-1">Manage your IoT dashboards</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Panels</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your IoT dashboards</p>
           </div>
           <button 
             onClick={handleCreatePanel}
-            className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="flex items-center justify-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Create New Panel
+            <span className="text-sm sm:text-base">Create New Panel</span>
           </button>
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {/* Search and Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-          <div className="flex items-center justify-between">
+          {/* Mobile Layout */}
+          <div className="block md:hidden space-y-3">
+            {/* Search Bar - Full Width */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search panels..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 w-full"
+              />
+            </div>
+            
+            {/* View Mode Buttons - Centered */}
+            <div className="flex items-center justify-center space-x-2">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg flex items-center justify-center ${viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-lg flex items-center justify-center ${viewMode === 'table' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden md:flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -180,24 +216,15 @@ function MyPanels() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`p-2 rounded-lg flex items-center justify-center ${viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                <div className="w-4 h-4 grid grid-cols-2 gap-0.5">
-                  <div className="bg-current rounded-sm"></div>
-                  <div className="bg-current rounded-sm"></div>
-                  <div className="bg-current rounded-sm"></div>
-                  <div className="bg-current rounded-sm"></div>
-                </div>
+                <Grid3X3 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-lg ${viewMode === 'table' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`p-2 rounded-lg flex items-center justify-center ${viewMode === 'table' ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                <div className="w-4 h-4 flex flex-col space-y-0.5">
-                  <div className="h-0.5 bg-current rounded"></div>
-                  <div className="h-0.5 bg-current rounded"></div>
-                  <div className="h-0.5 bg-current rounded"></div>
-                </div>
+                <List className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -207,7 +234,7 @@ function MyPanels() {
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPanels.map((panel) => (
-              <div key={panel.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+              <div key={panel.id} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{panel.name}</h3>
@@ -240,7 +267,49 @@ function MyPanels() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                {/* Mobile Button Layout */}
+                <div className="block sm:hidden space-y-3">
+                  <button 
+                    onClick={() => handleViewPanel(panel)}
+                    className="w-full flex items-center justify-center px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Panel
+                  </button>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button 
+                      onClick={() => handleEditPanel(panel)}
+                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      title="Edit Panel"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDuplicatePanel(panel)}
+                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      title="Duplicate Panel"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleSharePanel(panel)}
+                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      title="Share Panel"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeletePanel(panel)}
+                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-red-600 hover:text-red-800"
+                      title="Delete Panel"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Desktop Button Layout */}
+                <div className="hidden sm:flex items-center space-x-2">
                   <button 
                     onClick={() => handleViewPanel(panel)}
                     className="flex-1 flex items-center justify-center px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"

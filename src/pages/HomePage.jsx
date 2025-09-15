@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNavigation } from '../hooks/useNavigation'
 import { 
   Play, 
   BarChart3, 
@@ -36,6 +37,7 @@ import { usePanelStore } from '../stores/usePanelStore'
 
 function HomePage() {
   const navigate = useNavigate()
+  const { handleFooterLinkClick } = useNavigation()
   const [stats, setStats] = useState({
     devicesConnected: 0,
     dataPointsProcessed: 0,
@@ -57,19 +59,6 @@ function HomePage() {
     }
   }
 
-  // Scroll to top function
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
-
-  // Handle footer link clicks with scroll to top
-  const handleFooterLinkClick = (path) => {
-    navigate(path)
-    scrollToTop()
-  }
 
   // Simulate real-time stats
   useEffect(() => {

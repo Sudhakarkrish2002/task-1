@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigation } from '../hooks/useNavigation'
 import { usePanelStore } from '../stores/usePanelStore'
 import { useDeviceStore } from '../stores/useDeviceStore'
 import { GaugeWidget } from '../components/widgets/gauge-widget'
@@ -14,6 +15,7 @@ import GridManager from '../components/grid/GridManager'
  
 function CreatePanel() {
   const navigate = useNavigate()
+  const { handleNavigation } = useNavigation()
   const [searchParams] = useSearchParams()
   const [panelName, setPanelName] = useState('New Dashboard')
   const [mqttConnected, setMqttConnected] = useState(false)
@@ -69,7 +71,7 @@ function CreatePanel() {
           const panelToEditRetry = panels.find(p => p.id === editPanelId)
           if (!panelToEditRetry) {
             console.warn('Panel not found after retry, redirecting to panels list')
-            navigate('/')
+            handleNavigation('/')
           }
         }, 100)
         
@@ -258,7 +260,7 @@ function CreatePanel() {
       if (savedPanel && savedPanel.id) {
         const redirectUrl = `/dashboard-container?panel=${savedPanel.id}`
         console.log('Redirecting to:', redirectUrl)
-        navigate(redirectUrl)
+        handleNavigation(redirectUrl)
       } else {
         console.log('No savedPanel or ID, not redirecting. savedPanel:', savedPanel)
       }

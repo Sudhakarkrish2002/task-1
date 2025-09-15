@@ -12,6 +12,7 @@ import {
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import ChatBot from './components/ChatBot'
+import { useNavigation } from './hooks/useNavigation'
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -39,6 +40,7 @@ function SharedDashboardRoute() {
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { handleNavigation } = useNavigation()
   const [user, setUser] = useState(null)
   const [mqttStatus, setMqttStatus] = useState('disconnected')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -73,6 +75,15 @@ function App() {
     }
   }, [isUserMenuOpen])
 
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    })
+  }, [location.pathname])
+
   // Initialize MQTT connection (disabled for now - using random data only)
   useEffect(() => {
     if (user) {
@@ -95,6 +106,7 @@ function App() {
     // mqttService.disconnect() // TODO: Enable when MQTT is active
     navigate('/signin')
   }
+
 
   // Navigation items
   const navItems = [
@@ -150,7 +162,7 @@ function App() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => navigate(item.path)}
+                        onClick={() => handleNavigation(item.path)}
                         className={`group flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                           isActive 
                             ? 'bg-red-50 text-red-600 shadow-sm' 
@@ -228,7 +240,7 @@ function App() {
                     <button
                       key={item.id}
                       onClick={() => {
-                        navigate(item.path)
+                        handleNavigation(item.path)
                         setIsMobileMenuOpen(false)
                       }}
                       className={`group flex items-center space-x-3 w-full px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNavigation } from '../hooks/useNavigation'
 import CreateDashboardModal from '../components/CreateDashboardModal'
 import { usePanelStore } from '../stores/usePanelStore'
 import { 
@@ -43,6 +44,7 @@ import {
 
 function Contact() {
   const navigate = useNavigate()
+  const { handleFooterLinkClick, handleNavigation } = useNavigation()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -86,14 +88,7 @@ function Contact() {
 
   // Handle navigation to features page with scroll to top
   const handleExploreFeatures = () => {
-    navigate('/features')
-    // Scroll to top after navigation
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      })
-    }, 100)
+    handleNavigation('/features')
   }
 
   // Handle create panel functionality
@@ -113,14 +108,6 @@ function Contact() {
     }
   }
 
-  // Handle footer link clicks with scroll to top
-  const handleFooterLinkClick = (path) => {
-    navigate(path)
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
 
   const contactInfo = [
     {
@@ -230,18 +217,18 @@ function Contact() {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => navigate('/')}
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                className="hidden md:flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
                 Back to Home
               </button>
-              <div className="h-6 w-px bg-gray-300"></div>
+              <div className="hidden md:block h-6 w-px bg-gray-300"></div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Contact Us</h1>
                 <p className="text-gray-600">Get in touch with our IoT experts</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="hidden lg:flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm text-gray-600">Support Online</span>
@@ -419,16 +406,16 @@ function Contact() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center px-6 py-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-6 py-3 sm:py-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base min-h-[48px]"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       Sending Message...
                     </>
                   ) : (
                     <>
-                      <Send className="w-5 h-5 mr-2" />
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       Send Message
                     </>
                   )}
@@ -521,9 +508,9 @@ function Contact() {
             <p className="text-gray-600 mb-4">Still have questions?</p>
             <button 
               onClick={handleExploreFeatures}
-              className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors mx-auto"
+              className="flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors mx-auto text-sm sm:text-base min-h-[44px]"
             >
-              <MessageCircle className="w-5 h-5 mr-2" />
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Contact Support
             </button>
           </div>
@@ -531,27 +518,27 @@ function Contact() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 bg-red-600 text-white">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold mb-6">
+      <div className="py-12 sm:py-16 bg-red-600 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">
             Ready to Get Started?
           </h2>
-          <p className="text-xl mb-8 text-red-100">
+          <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 text-red-100 px-4">
             Join thousands of developers and enterprises building the future with our comprehensive IoT platform.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
             <button 
               onClick={handleCreatePanel}
-              className="flex items-center px-8 py-4 bg-white text-red-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white text-red-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm sm:text-base w-full sm:w-auto min-h-[48px]"
             >
-              <Zap className="w-5 h-5 mr-2" />
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Start Free Trial
             </button>
             <button 
               onClick={handleExploreFeatures}
-              className="flex items-center px-8 py-4 border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-red-600 transition-colors"
+              className="flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-red-600 transition-colors text-sm sm:text-base w-full sm:w-auto min-h-[48px]"
             >
-              <ChevronRight className="w-5 h-5 mr-2" />
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Explore Features
             </button>
           </div>

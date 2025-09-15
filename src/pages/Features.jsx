@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNavigation } from '../hooks/useNavigation'
 import CreateDashboardModal from '../components/CreateDashboardModal'
 import { usePanelStore } from '../stores/usePanelStore'
 import { 
@@ -52,6 +53,7 @@ import {
 
 function Features() {
   const navigate = useNavigate()
+  const { handleFooterLinkClick } = useNavigation()
   const [activeCategory, setActiveCategory] = useState('analytics')
   const [showCreateModal, setShowCreateModal] = useState(false)
 
@@ -371,14 +373,6 @@ function Features() {
     }
   }
 
-  // Handle footer link clicks with scroll to top
-  const handleFooterLinkClick = (path) => {
-    navigate(path)
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
 
   // Scroll to top when component mounts
   useEffect(() => {
