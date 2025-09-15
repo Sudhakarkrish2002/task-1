@@ -115,25 +115,27 @@ export const GaugeWidget = ({
     ctx.strokeStyle = colorMap[gaugeColor] || colorMap.primary
     ctx.stroke()
 
-    // Value text
+    // Value text - responsive font size
     ctx.fillStyle = '#1e293b'
-    ctx.font = 'bold 18px Inter, sans-serif'
+    const fontSize = Math.max(12, Math.min(18, radius * 0.3))
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`
     ctx.textAlign = 'center'
     ctx.fillText(`${currentValue}${unit}`, centerX, centerY + 6)
 
-    // Label text
+    // Label text - responsive font size
     ctx.fillStyle = '#64748b'
-    ctx.font = '12px Inter, sans-serif'
+    const labelFontSize = Math.max(8, Math.min(12, radius * 0.2))
+    ctx.font = `${labelFontSize}px Inter, sans-serif`
     ctx.fillText(label || title, centerX, centerY + 25)
   }, [currentValue, max, min, unit, label, title, gaugeColor])
 
   return (
-    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-2 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
+    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-1.5 sm:p-2 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0">
+        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{title}</h3>
         <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500">{connected ? 'Live' : 'Offline'}</span>
+          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-gray-500 hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
         </div>
       </div>
       
@@ -151,7 +153,7 @@ export const GaugeWidget = ({
         </div>
       </div>
       
-      <div className="mt-2 text-center flex-shrink-0">
+      <div className="mt-1 sm:mt-2 text-center flex-shrink-0">
         <div className="text-xs text-gray-600">
           {mqttTopic && (
             <div className="text-xs text-gray-400 mt-1 truncate">

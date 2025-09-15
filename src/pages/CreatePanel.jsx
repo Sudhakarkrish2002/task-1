@@ -32,6 +32,8 @@ function CreatePanel() {
   
   // Ref to store current grid data
   const currentGridDataRef = useRef(null)
+  // Ref to access GridManager methods
+  const gridManagerRef = useRef(null)
 
   // Widget types available in the palette
   const widgetTypes = [
@@ -112,6 +114,15 @@ function CreatePanel() {
       // Update the selected widget state
       setSelectedWidget({ ...selectedWidget, ...widgetSettings })
       
+      // Update the grid widgets immediately
+      const updateEvent = new CustomEvent('updateGridWidget', {
+        detail: { 
+          widgetId: selectedWidget.i, 
+          updates: widgetSettings 
+        }
+      })
+      window.dispatchEvent(updateEvent)
+      
       // Close the modal
       setShowWidgetSettings(false)
       
@@ -127,7 +138,7 @@ function CreatePanel() {
         return (
           <GaugeWidget
             value={widget.value || 50}
-            max={widget.max || 100}
+            max={widget.maxValue || widget.max || 100}
             label={widget.title || 'Gauge'}
             color={widget.color || 'primary'}
           />
@@ -184,8 +195,8 @@ function CreatePanel() {
             mqttTopic={widget.mqttTopic}
             title={widget.title || 'Slider Control'}
             value={widget.value || 50}
-            min={widget.min || 0}
-            max={widget.max || 100}
+            min={widget.minValue || widget.min || 0}
+            max={widget.maxValue || widget.max || 100}
             color={widget.color || '#3b82f6'}
             size="small"
           />
@@ -453,6 +464,7 @@ function CreatePanel() {
 
       {/* Grid Manager */}
       <GridManager
+        ref={gridManagerRef}
         title={panelName}
         initialWidgets={currentPanel?.widgets || []}
         initialLayouts={currentPanel?.layout || {}}

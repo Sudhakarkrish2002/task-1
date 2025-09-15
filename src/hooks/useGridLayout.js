@@ -107,6 +107,25 @@ export const useGridLayout = (options = {}) => {
     }
 
     // Use custom position if provided (from professional drag and drop)
+    const defaultSettings = {
+      title: `${widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}`,
+      dataType: 'int',
+      entryType: 'automatic',
+      minValue: 0,
+      maxValue: 100,
+      dataChannelId: 0,
+      // Additional default values for backward compatibility
+      min: 0,
+      max: 100,
+      value: 50,
+      color: '#3b82f6',
+      status: false,
+      location: 'Device Location',
+      unit: '',
+      chartType: 'line',
+      modelType: 'cube'
+    }
+    
     const newWidget = widgetOptions.position 
       ? {
           i: generateWidgetId(),
@@ -120,7 +139,8 @@ export const useGridLayout = (options = {}) => {
           maxW: 12,
           maxH: 10,
           static: false,
-          ...widgetOptions
+          ...defaultSettings, // Apply default settings
+          ...widgetOptions // Override with any provided options
         }
       : createWidget(widgetType, widgets, widgetOptions)
     

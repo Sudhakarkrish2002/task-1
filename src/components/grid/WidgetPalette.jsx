@@ -175,30 +175,30 @@ export const WidgetPalette = ({
   return (
     <div className={`widget-palette h-full flex flex-col ${className}`} {...props}>
       {/* Fixed Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Widgets</h3>
-          <p className="text-sm text-gray-600">Click or drag widgets to your dashboard</p>
+      <div className="p-3 sm:p-4 border-b border-gray-200 bg-white">
+        <div className="mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Widgets</h3>
+          <p className="text-xs sm:text-sm text-gray-600">Click or drag widgets to your dashboard</p>
         </div>
         
         {/* Search */}
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
             <input
               type="text"
               placeholder="Search widgets..."
               value={searchTerm}
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-xs sm:text-sm"
             />
           </div>
         </div>
       </div>
 
       {/* Scrollable Widget Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 gap-3">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+        <div className="grid grid-cols-1 gap-2 sm:gap-3">
           {filteredWidgets.map((widgetType) => {
             const isDragging = draggedWidget === widgetType.type
             
@@ -210,20 +210,20 @@ export const WidgetPalette = ({
                 onDragEnd={handleDragEnd}
                 onClick={() => handleWidgetClick(widgetType.type)}
                 className={`
-                  group relative bg-white border border-gray-200 rounded-xl p-4
+                  group relative bg-white border border-gray-200 rounded-xl p-3 sm:p-4
                   hover:border-red-300 hover:shadow-lg cursor-grab transition-all duration-200
                   ${isDragging ? 'opacity-50 scale-95 cursor-grabbing' : 'hover:scale-[1.02]'}
                 `}
               >
                 {/* Widget Preview */}
-                <div className="flex items-center space-x-3 mb-3">
+                <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
                   <WidgetPreview widgetType={widgetType} />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-sm">{widgetType.name}</h4>
+                    <h4 className="font-semibold text-gray-900 text-xs sm:text-sm">{widgetType.name}</h4>
                     <p className="text-xs text-gray-500 mt-0.5">Click or drag to add</p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Plus className="w-4 h-4 text-red-600" />
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                   </div>
                 </div>
                 
@@ -236,9 +236,9 @@ export const WidgetPalette = ({
 
         {/* No Results */}
         {filteredWidgets.length === 0 && (
-          <div className="text-center py-8">
-            <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 font-medium">No widgets found</p>
+          <div className="text-center py-6 sm:py-8">
+            <Search className="w-8 h-8 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">No widgets found</p>
             <p className="text-xs text-gray-400 mt-1">Try adjusting your search term</p>
           </div>
         )}

@@ -297,12 +297,12 @@ export const ChartWidget = ({
   }, [mqttTopic])
 
   return (
-    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-2 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
+    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-1.5 sm:p-2 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0">
+        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{title}</h3>
         <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500">{connected ? 'Live' : 'Offline'}</span>
+          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-gray-500 hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
         </div>
       </div>
       
@@ -310,11 +310,11 @@ export const ChartWidget = ({
         <div 
           ref={chartRef}
           className="w-full h-full max-w-full max-h-full"
-          style={{ minHeight: '120px' }}
+          style={{ minHeight: '80px' }}
         />
       </div>
       
-      <div className="mt-2 text-center flex-shrink-0">
+      <div className="mt-1 sm:mt-2 text-center flex-shrink-0">
         <div className="text-xs text-gray-600">
           {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, forwardRef } from 'react'
 import { Save, Eye, Settings, RotateCcw } from 'lucide-react'
 import { EnhancedGridLayout } from './EnhancedGridLayout'
 import { WidgetPalette } from './WidgetPalette'
@@ -17,7 +17,7 @@ import { Button } from '../ui/button'
  * @param {boolean} props.showToolbar - Show toolbar
  * @param {Object} props.className - Additional CSS classes
  */
-export const GridManager = ({
+export const GridManager = forwardRef(({
   initialWidgets = [],
   initialLayouts = {},
   renderWidget,
@@ -30,7 +30,7 @@ export const GridManager = ({
   className = '',
   isSharedMode = false,
   ...props
-}) => {
+}, ref) => {
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('grid')
@@ -119,38 +119,51 @@ export const GridManager = ({
     return () => window.removeEventListener('gridManagerSave', handleSaveTrigger)
   }, [handleSave, widgets, layouts, title, getGridStats])
 
+  // Listen for widget update events
+  useEffect(() => {
+    const handleWidgetUpdate = (event) => {
+      const { widgetId, updates } = event.detail
+      if (widgetId && updates) {
+        updateWidget(widgetId, updates)
+      }
+    }
+
+    window.addEventListener('updateGridWidget', handleWidgetUpdate)
+    return () => window.removeEventListener('updateGridWidget', handleWidgetUpdate)
+  }, [updateWidget])
+
   return (
     <div className={`grid-manager min-h-screen bg-gray-50 ${className}`} {...props}>
       {/* Header */}
       {showToolbar && (
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-0 sm:space-x-2 text-xs sm:text-sm text-gray-600">
                 <span>Widgets: {gridStats.totalWidgets}</span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>Utilization: {gridStats.gridUtilization.toFixed(1)}%</span>
                 {overlaps.length > 0 && (
                   <>
-                    <span>•</span>
+                    <span className="hidden sm:inline">•</span>
                     <span className="text-red-600 font-medium">{overlaps.length} Overlap{overlaps.length > 1 ? 's' : ''}</span>
                   </>
                 )}
               </div>
-              
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {overlaps.length > 0 && (
                 <Button
                   onClick={fixOverlaps}
                   variant="outline"
                   size="sm"
-                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs sm:text-sm"
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Fix Overlaps
+                  <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Fix Overlaps</span>
+                  <span className="sm:hidden">Fix</span>
                 </Button>
               )}
               
@@ -158,19 +171,21 @@ export const GridManager = ({
                 onClick={() => setIsPreviewMode(!isPreviewMode)}
                 variant={isPreviewMode ? "default" : "outline"}
                 size="sm"
+                className="text-xs sm:text-sm"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                {isPreviewMode ? 'Edit Mode' : 'Preview Mode'}
+                <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{isPreviewMode ? 'Edit Mode' : 'Preview Mode'}</span>
+                <span className="sm:hidden">{isPreviewMode ? 'Edit' : 'Preview'}</span>
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex h-[calc(100vh-120px)]">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
         {/* Widget Palette - Hidden in shared mode */}
         {showPalette && !isSharedMode && (
-          <div className="w-72 bg-white border-r border-gray-200 shadow-sm overflow-hidden">
+          <div className="w-full lg:w-72 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 shadow-sm overflow-hidden">
             <WidgetPalette
               widgetTypes={widgetTypes}
               onWidgetAdd={handleWidgetAdd}
@@ -207,6 +222,8 @@ export const GridManager = ({
 
     </div>
   )
-}
+})
+
+GridManager.displayName = 'GridManager'
 
 export default GridManager

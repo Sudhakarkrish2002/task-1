@@ -227,6 +227,26 @@ export const createWidget = (widgetType, existingWidgets = [], options = {}) => 
   const size = getWidgetSize(widgetType)
   const position = findNextAvailablePosition(existingWidgets, size)
   
+  // Default settings for each widget type
+  const defaultSettings = {
+    title: `${widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}`,
+    dataType: 'int',
+    entryType: 'automatic',
+    minValue: 0,
+    maxValue: 100,
+    dataChannelId: 0,
+    // Additional default values for backward compatibility
+    min: 0,
+    max: 100,
+    value: 50,
+    color: '#3b82f6',
+    status: false,
+    location: 'Device Location',
+    unit: '',
+    chartType: 'line',
+    modelType: 'cube'
+  }
+  
   const newWidget = {
     i: generateWidgetId(),
     type: widgetType,
@@ -239,7 +259,8 @@ export const createWidget = (widgetType, existingWidgets = [], options = {}) => 
     maxW: 12, // Allow maximum width of 12 (full grid)
     maxH: 10, // Allow maximum height of 10
     static: false,
-    ...options
+    ...defaultSettings, // Apply default settings
+    ...options // Override with any provided options
   }
   
   return validateWidget(newWidget)
@@ -320,7 +341,7 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   containerPadding: GRID_CONFIG.containerPadding,
   useCSSTransforms: true,
   transformScale: 1,
-  draggableHandle: '.widget-header',
+  draggableHandle: null, // Allow dragging from anywhere on the widget
   preventCollision: false, // Disable preventCollision to allow manual positioning
   compactType: null, // Disable compacting to maintain positions
   autoSize: true,

@@ -185,48 +185,49 @@ export const EnhancedGridLayout = ({
     >
       {/* Status Bar */}
       {showStatusBar && (
-        <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 border-b border-gray-200 gap-3 sm:gap-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-wrap items-center gap-2">
               {overlaps.length > 0 ? (
                 <div className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="text-sm font-medium">{overlaps.length} Overlap{overlaps.length > 1 ? 's' : ''}</span>
+                  <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm font-medium">{overlaps.length} Overlap{overlaps.length > 1 ? 's' : ''}</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">No Overlaps</span>
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm font-medium">No Overlaps</span>
                 </div>
               )}
               
               {isValidating && (
                 <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-600 rounded-lg">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm font-medium">Validating</span>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs sm:text-sm font-medium">Validating</span>
                 </div>
               )}
             </div>
             
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600">
               Widgets: {gridStats.totalWidgets} • Utilization: {gridStats.gridUtilization.toFixed(1)}%
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             {overlaps.length > 0 && enableAutoFix && (
-              <div className="flex items-center px-3 py-1 bg-orange-100 text-orange-600 rounded-lg text-sm">
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Overlaps Detected
+              <div className="flex items-center px-2 sm:px-3 py-1 bg-orange-100 text-orange-600 rounded-lg text-xs sm:text-sm">
+                <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <span className="hidden sm:inline">Overlaps Detected</span>
+                <span className="sm:hidden">Overlaps</span>
               </div>
             )}
             
             <button
               onClick={toggleFullscreen}
-              className="flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              className="flex items-center px-2 sm:px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-xs sm:text-sm"
               title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isFullscreen ? <Minimize2 className="w-3 h-3 sm:w-4 sm:h-4" /> : <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />}
             </button>
           </div>
         </div>
@@ -235,12 +236,12 @@ export const EnhancedGridLayout = ({
       {/* Drag Over Indicator */}
       {isDragOver && (
         <div className="absolute inset-0 bg-red-50 border-2 border-dashed border-red-400 z-10 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <span className="text-2xl">📊</span>
+          <div className="text-center px-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse">
+              <span className="text-xl sm:text-2xl">📊</span>
             </div>
-            <p className="text-lg font-semibold text-red-700">Drop widget here</p>
-            <p className="text-sm text-red-600 mt-1">Release to add widget to dashboard</p>
+            <p className="text-base sm:text-lg font-semibold text-red-700">Drop widget here</p>
+            <p className="text-xs sm:text-sm text-red-600 mt-1">Release to add widget to dashboard</p>
             {window.draggedWidgetType && (
               <p className="text-xs text-red-500 mt-2">Widget: {window.draggedWidgetType}</p>
             )}
@@ -289,14 +290,14 @@ export const EnhancedGridLayout = ({
         {/* Empty state message */}
         {widgets.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center empty-dashboard-state">
-            <div className="text-center text-gray-500 empty-message rounded-lg p-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center text-gray-500 empty-message rounded-lg p-4 sm:p-8">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <p className="text-xl font-semibold text-gray-700 mb-2">Empty Dashboard</p>
-              <p className="text-sm text-gray-500 max-w-sm">Drag widgets from the palette or click them to add to your dashboard</p>
+              <p className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Empty Dashboard</p>
+              <p className="text-xs sm:text-sm text-gray-500 max-w-sm">Drag widgets from the palette or click them to add to your dashboard</p>
             </div>
           </div>
         )}
@@ -338,7 +339,8 @@ export const EnhancedGridLayout = ({
                     {onWidgetSettings && (
                       <button
                         onClick={(e) => onWidgetSettings(widget, e)}
-                        className="p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200 shadow-sm"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200 shadow-sm cursor-pointer"
                         title="Widget Settings"
                       >
                         <Settings className="w-3 h-3" />
@@ -346,14 +348,16 @@ export const EnhancedGridLayout = ({
                     )}
                     <button
                       onClick={(e) => handleWidgetCopy(widget.i, e)}
-                      className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 shadow-sm"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 shadow-sm cursor-pointer"
                       title="Copy widget"
                     >
                       <Copy className="w-3 h-3" />
                     </button>
                     <button
                       onClick={(e) => handleWidgetDelete(widget.i, e)}
-                      className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm cursor-pointer"
                       title="Delete widget"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -369,10 +373,10 @@ export const EnhancedGridLayout = ({
         {/* Empty State */}
         {widgets.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-4xl mb-4">📊</div>
-              <p className="text-lg text-gray-600">No widgets added yet</p>
-              <p className="text-sm text-gray-500 mt-2">
+            <div className="text-center px-4">
+              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📊</div>
+              <p className="text-base sm:text-lg text-gray-600">No widgets added yet</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-2">
                 Add widgets to start building your dashboard
               </p>
             </div>
@@ -383,11 +387,11 @@ export const EnhancedGridLayout = ({
         {showScrollButton && widgets.length > 0 && !isDashboardView && (
           <button
             onClick={scrollToBottom}
-            className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 flex items-center space-x-2"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 flex items-center space-x-1 sm:space-x-2"
             title="Scroll to bottom to see all widgets"
           >
-            <ChevronDown className="w-5 h-5" />
-            <span className="text-sm font-medium">View All Widgets</span>
+            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-xs sm:text-sm font-medium hidden sm:inline">View All Widgets</span>
           </button>
         )}
         

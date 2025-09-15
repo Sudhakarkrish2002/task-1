@@ -320,7 +320,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t border-gray-200 px-6 py-3">
+        <div className="bg-white border-t border-gray-200 px-6 py-2">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <div className="flex items-center space-x-4">
               <span>Published: {new Date(dashboardData.publishedAt).toLocaleDateString()}</span>

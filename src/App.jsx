@@ -1,22 +1,29 @@
 import { useState, Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { 
-  Bell, 
-  Settings,
   User,
   Home,
   Grid3X3,
-  LogOut
+  LogOut,
+  MessageCircle,
+  Menu,
+  X
 } from 'lucide-react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
+import ChatBot from './components/ChatBot'
 
 // Lazy load pages for better performance
+const HomePage = lazy(() => import('./pages/HomePage'))
 const MyPanels = lazy(() => import('./pages/MyPanels'))
 const CreatePanel = lazy(() => import('./pages/CreatePanel'))
 const DashboardContainer = lazy(() => import('./pages/DashboardContainer'))
 const SignIn = lazy(() => import('./pages/SignIn'))
 const SharedDashboardView = lazy(() => import('./components/SharedDashboardView'))
+
+// Feature pages
+const Features = lazy(() => import('./pages/Features'))
+const Contact = lazy(() => import('./pages/Contact'))
 
 // Shared Dashboard Route Component
 function SharedDashboardRoute() {
@@ -34,6 +41,8 @@ function App() {
   const location = useLocation()
   const [user, setUser] = useState(null)
   const [mqttStatus, setMqttStatus] = useState('disconnected')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
   // Check authentication on app load
   useEffect(() => {
@@ -49,6 +58,20 @@ function App() {
       }
     }
   }, [])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isUserMenuOpen && !event.target.closest('.user-menu')) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isUserMenuOpen])
 
   // Initialize MQTT connection (disabled for now - using random data only)
   useEffect(() => {
@@ -75,7 +98,10 @@ function App() {
 
   // Navigation items
   const navItems = [
-    { id: 'panels', label: 'My Panels', icon: Home, path: '/' },
+    { id: 'home', label: 'Home', icon: Home, path: '/home' },
+    { id: 'features', label: 'Features', icon: Grid3X3, path: '/features' },
+    { id: 'panels', label: 'My Panels', icon: Grid3X3, path: '/panels' },
+    { id: 'contact', label: 'Contact', icon: MessageCircle, path: '/contact' },
   ]
 
   // If user is not authenticated and not on signin page or shared dashboard, redirect to signin
@@ -85,7 +111,7 @@ function App() {
 
   // If user is authenticated and on signin page, redirect to home
   if (user && location.pathname === '/signin') {
-    navigate('/')
+    navigate('/home')
     return null
   }
 
@@ -106,93 +132,146 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Global Navigation */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl font-bold text-gray-900">IoT Dashboard</span>
-            </div>
-            
-            <nav className="flex items-center space-x-6">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const isActive = location.pathname === item.path
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => navigate(item.path)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-red-100 text-red-600' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {/* MQTT Status */}
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                mqttStatus === 'connected' ? 'bg-green-500' : 
-                mqttStatus === 'reconnecting' ? 'bg-yellow-500' : 'bg-red-500'
-              }`}></div>
-              <span className="text-sm text-gray-600">MQTT {mqttStatus}</span>
-            </div>
-            
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded">
-              <Bell className="w-5 h-5" />
-            </button>
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded">
-              <Settings className="w-5 h-5" />
-            </button>
-            
-            {/* User Menu */}
-            <div className="relative group">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center cursor-pointer">
-                <User className="w-4 h-4 text-gray-600" />
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo and Brand */}
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <span className="text-xl font-bold text-gray-900">IoT Dashboard</span>
               </div>
               
-              {/* Dropdown Menu */}
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="p-3 border-b border-gray-200">
-                  <p className="text-sm font-medium text-gray-900">{user?.name || 'User'}</p>
-                  <p className="text-xs text-gray-500">{user?.email}</p>
-                </div>
-                <div className="p-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </button>
+              {/* Desktop Navigation Links */}
+              <div className="hidden lg:block ml-10">
+                <div className="flex items-center space-x-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon
+                    const isActive = location.pathname === item.path
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => navigate(item.path)}
+                        className={`group flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          isActive 
+                            ? 'bg-red-50 text-red-600 shadow-sm' 
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 transition-colors ${
+                          isActive ? 'text-red-600' : 'text-gray-500 group-hover:text-gray-700'
+                        }`} />
+                        <span>{item.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
+
+            {/* Right side items */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              
+              {/* User Menu */}
+              <div className="relative user-menu">
+                <button 
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="group flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium">{user?.name || 'User'}</span>
+                </button>
+                
+                {/* Dropdown Menu */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">{user?.name || 'User'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4 mr-3 text-gray-500" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="lg:hidden border-t border-gray-200 bg-white">
+              <div className="px-2 pt-2 pb-3 space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = location.pathname === item.path
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        navigate(item.path)
+                        setIsMobileMenuOpen(false)
+                      }}
+                      className={`group flex items-center space-x-3 w-full px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-red-50 text-red-600' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 transition-colors ${
+                        isActive ? 'text-red-600' : 'text-gray-500 group-hover:text-gray-700'
+                      }`} />
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </nav>
 
       {/* Main Content */}
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingSpinner fullScreen text="Loading page..." />}>
+      <div className="main-content">
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingSpinner fullScreen text="Loading page..." />}>
           <Routes>
-            <Route path="/" element={<MyPanels />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/panels" element={<MyPanels />} />
             <Route path="/create" element={<CreatePanel />} />
             <Route path="/dashboard-container" element={<DashboardContainer />} />
             <Route path="/dashboard" element={<DashboardContainer />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/shared/:panelId" element={<SharedDashboardRoute />} />
           </Routes>
-        </Suspense>
-      </ErrorBoundary>
+          </Suspense>
+        </ErrorBoundary>
+      </div>
 
+      {/* Global ChatBot */}
+      <ChatBot />
     </div>
   )
 }
