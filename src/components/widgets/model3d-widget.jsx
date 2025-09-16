@@ -1,19 +1,52 @@
 import React, { useState, useEffect } from 'react'
 import { Box, RotateCcw, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
+import { useAutoValue } from '../../hooks/useAutoValue'
 
 export const Model3DWidget = ({ 
   widgetId,
-  mqttTopic,
   title = '3D Model',
   modelType = 'cube',
   rotation = { x: 0, y: 0, z: 0 },
   scale = 1,
   color = '#3b82f6',
-  size = 'medium'
+  size = 'medium',
+  mqttTopic = null,
+  panelId = 'default',
+  autoGenerate = true
 }) => {
+  const { value: modelData, connected, deviceInfo } = useAutoValue(
+    widgetId, 
+    'model3d', 
+    { modelType, rotation, scale }, 
+    panelId, 
+    autoGenerate
+  )
   const [currentRotation, setCurrentRotation] = useState(rotation)
   const [currentScale, setCurrentScale] = useState(scale)
   const [isRotating, setIsRotating] = useState(false)
+
+  // Update rotation and scale from auto-generated data
+  useEffect(() => {
+    if (modelData) {
+      setCurrentRotation(modelData.rotation)
+      setCurrentScale(modelData.scale)
+      setIsRotating(modelData.isRotating)
+    }
+  }, [modelData])
+
+  // Auto-rotation effect
+  useEffect(() => {
+    if (!isRotating) return
+
+    const interval = setInterval(() => {
+      setCurrentRotation(prev => ({
+        ...prev,
+        y: prev.y + 2 // Rotate 2 degrees per frame
+      }))
+    }, 50) // 20 FPS
+
+    return () => clearInterval(interval)
+  }, [isRotating])
 
   // Size configurations
   const sizeConfig = {
@@ -24,22 +57,7 @@ export const Model3DWidget = ({
 
   const { width, height } = sizeConfig[size] || sizeConfig.medium
 
-  // Auto-rotation effect
-  useEffect(() => {
-    if (!isRotating) return
 
-    const interval = setInterval(() => {
-      setCurrentRotation(prev => ({
-        x: prev.x,
-        y: prev.y + 1,
-        z: prev.z
-      }))
-    }, 50)
-
-    return () => clearInterval(interval)
-  }, [isRotating])
-
-  // For now, we'll skip MQTT integration
 
   // Handle rotation control
   const handleRotation = (axis, direction) => {
@@ -76,11 +94,17 @@ export const Model3DWidget = ({
       case 'cube':
         return (
           <div 
-            className="w-20 h-20 relative"
+            className="relative"
             style={{ 
+              width: '80px',
+              height: '80px',
               transform,
               transformStyle: 'preserve-3d',
-              transition: isRotating ? 'none' : 'transform 0.3s ease'
+              transition: isRotating ? 'none' : 'transform 0.3s ease',
+              perspective: '200px',
+              overflow: 'visible',
+              position: 'relative',
+              zIndex: 25
             }}
           >
             {/* Cube faces */}
@@ -97,7 +121,8 @@ export const Model3DWidget = ({
                 className="absolute w-20 h-20 border border-gray-300"
                 style={{
                   backgroundColor: face.color,
-                  transform: face.transform
+                  transform: face.transform,
+                  backfaceVisibility: 'hidden'
                 }}
               />
             ))}
@@ -107,11 +132,17 @@ export const Model3DWidget = ({
       case 'sphere':
         return (
           <div 
-            className="w-20 h-20 rounded-full border-2 border-gray-300"
+            className="rounded-full border-2 border-gray-300"
             style={{ 
+              width: '80px',
+              height: '80px',
               backgroundColor: color + '40',
               transform,
-              transition: isRotating ? 'none' : 'transform 0.3s ease'
+              transition: isRotating ? 'none' : 'transform 0.3s ease',
+              boxShadow: `inset 0 0 20px ${color}20`,
+              overflow: 'visible',
+              position: 'relative',
+              zIndex: 25
             }}
           />
         )
@@ -122,7 +153,12 @@ export const Model3DWidget = ({
             className="relative"
             style={{ 
               transform,
-              transition: isRotating ? 'none' : 'transform 0.3s ease'
+              transition: isRotating ? 'none' : 'transform 0.3s ease',
+              width: '80px',
+              height: '80px',
+              overflow: 'visible',
+              position: 'relative',
+              zIndex: 25
             }}
           >
             <div 
@@ -135,11 +171,16 @@ export const Model3DWidget = ({
       default:
         return (
           <div 
-            className="w-20 h-20 border-2 border-gray-300 rounded"
+            className="border-2 border-gray-300 rounded"
             style={{ 
+              width: '80px',
+              height: '80px',
               backgroundColor: color + '40',
               transform,
-              transition: isRotating ? 'none' : 'transform 0.3s ease'
+              transition: isRotating ? 'none' : 'transform 0.3s ease',
+              overflow: 'visible',
+              position: 'relative',
+              zIndex: 25
             }}
           />
         )
@@ -147,8 +188,18 @@ export const Model3DWidget = ({
   }
 
   return (
-    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-2 flex flex-col">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+    <div 
+      className="w-full h-full bg-white rounded-lg border border-gray-200 p-3 flex flex-col overflow-visible"
+      data-widget-type="model3d"
+      style={{ 
+        minHeight: '200px',
+        height: '100%',
+        overflow: 'visible',
+        position: 'relative',
+        zIndex: 10
+      }}
+    >
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
         <div className="flex items-center space-x-1 flex-shrink-0">
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -156,14 +207,43 @@ export const Model3DWidget = ({
         </div>
       </div>
       
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+      <div 
+        className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-visible"
+        style={{ 
+          minHeight: '120px',
+          height: 'auto',
+          overflow: 'visible',
+          position: 'relative',
+          zIndex: 5
+        }}
+      >
         {/* 3D Model Display */}
-        <div className="flex items-center justify-center mb-3" style={{ height: '80px' }}>
-          {renderModel()}
+        <div 
+          className="flex items-center justify-center mb-4 overflow-visible" 
+          style={{ 
+            minHeight: '100px', 
+            height: 'auto',
+            width: '100%',
+            overflow: 'visible',
+            position: 'relative',
+            zIndex: 15
+          }}
+        >
+          <div 
+            className="transform-gpu" 
+            style={{ 
+              transformStyle: 'preserve-3d',
+              overflow: 'visible',
+              position: 'relative',
+              zIndex: 20
+            }}
+          >
+            {renderModel()}
+          </div>
         </div>
         
         {/* Control Panel */}
-        <div className="space-y-2 w-full max-w-full px-2">
+        <div className="space-y-3 w-full max-w-full px-1">
           {/* Rotation Controls */}
           <div className="flex justify-center space-x-2">
             <button
@@ -175,7 +255,7 @@ export const Model3DWidget = ({
             </button>
             <button
               onClick={toggleRotation}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                 isRotating 
                   ? 'bg-red-100 text-red-700 hover:bg-red-200' 
                   : 'bg-red-100 text-red-700 hover:bg-red-200'
@@ -215,7 +295,7 @@ export const Model3DWidget = ({
         </div>
       </div>
       
-      <div className="mt-4 text-center">
+      <div className="mt-3 text-center flex-shrink-0">
         <div className="text-sm text-gray-600">
           Type: {modelType.charAt(0).toUpperCase() + modelType.slice(1)}
         </div>

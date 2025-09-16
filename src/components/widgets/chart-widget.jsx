@@ -1,332 +1,149 @@
-import React, { useEffect, useRef, useState, memo, useCallback } from 'react'
-import * as echarts from 'echarts'
+import React, { useEffect, useRef } from 'react'
+import { useAutoValue } from '../../hooks/useAutoValue'
 
 export const ChartWidget = ({ 
   widgetId,
-  mqttTopic,
   title = 'Chart',
-  chartType = 'line', // line, bar, area, pie
-  dataPoints = 20,
-  color = '#3b82f6',
-  size = 'medium'
+  chartType = 'bar',
+  color = '#ef4444',
+  panelId = 'default',
+  autoGenerate = true
 }) => {
-  const chartRef = useRef(null)
-  const chartInstance = useRef(null)
-  const [data, setData] = useState([])
-  const [timeLabels, setTimeLabels] = useState([])
-  const [connected, setConnected] = useState(false)
-  const [lastValue, setLastValue] = useState(0)
+  const { value: data, connected, deviceInfo } = useAutoValue(
+    widgetId, 
+    'chart', 
+    { chartType }, 
+    panelId, 
+    autoGenerate
+  )
+  const canvasRef = useRef(null)
 
-  // Size configurations
-  const sizeConfig = {
-    small: { width: 250, height: 150 },
-    medium: { width: 400, height: 250 },
-    large: { width: 500, height: 300 }
-  }
+  // Validate data
+  const safeData = Array.isArray(data) && data.length > 0 ? data : [10, 20, 30, 40, 50, 60, 70, 80]
+  const validData = safeData.filter(val => typeof val === 'number' && !isNaN(val))
 
-  const { width, height } = sizeConfig[size] || sizeConfig.medium
-
-  // Generate initial data
+  // Draw chart
   useEffect(() => {
-    const generateInitialData = () => {
-      const now = new Date()
-      const labels = []
-      const values = []
-      
-      for (let i = dataPoints - 1; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000) // 1 minute intervals
-        labels.push(time.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }))
-        values.push(0) // Initialize with 0, will be updated via MQTT
-      }
-      
-      setTimeLabels(labels)
-      setData(values)
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    const rect = canvas.getBoundingClientRect()
+    
+    canvas.width = rect.width * window.devicePixelRatio
+    canvas.height = rect.height * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+    const width = rect.width
+    const height = rect.height
+    const padding = 20
+    const chartWidth = width - (padding * 2)
+    const chartHeight = height - (padding * 2)
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height)
+
+    if (validData.length === 0) {
+      // Draw placeholder text
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '14px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('No data available', width / 2, height / 2)
+      return
     }
 
-    generateInitialData()
-  }, [dataPoints])
+    // Draw bars
+    const barWidth = chartWidth / validData.length
+    const maxValue = Math.max(...validData)
 
-  useEffect(() => {
-    if (!chartRef.current) return
+    validData.forEach((value, index) => {
+      const barHeight = (value / maxValue) * chartHeight
+      const x = padding + (index * barWidth)
+      const y = padding + chartHeight - barHeight
 
-    // Initialize ECharts
-    chartInstance.current = echarts.init(chartRef.current)
+      // Bar
+      ctx.fillStyle = color
+      ctx.fillRect(x + 2, y, barWidth - 4, barHeight)
 
-    const getChartOption = () => {
-      const baseOption = {
-        title: {
-          text: title,
-          left: 'center',
-          textStyle: {
-            fontSize: 16,
-            fontWeight: 'bold'
-          }
-        },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'cross'
-          }
-        },
-        grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'category',
-          data: timeLabels,
-          axisLabel: {
-            fontSize: 10
-          }
-        },
-        yAxis: {
-          type: 'value',
-          axisLabel: {
-            fontSize: 10
-          }
-        },
-        series: []
+      // Value text
+      if (barHeight > 15) {
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '10px Inter, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(value.toString(), x + barWidth / 2, y + barHeight / 2 + 3)
       }
+    })
 
-      switch (chartType) {
-        case 'line':
-          baseOption.series = [{
-            name: title,
-            type: 'line',
-            data: data,
-            smooth: true,
-            lineStyle: {
-              color: color,
-              width: 2
-            },
-            itemStyle: {
-              color: color
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [{
-                  offset: 0, color: color + '40'
-                }, {
-                  offset: 1, color: color + '10'
-                }]
-              }
-            }
-          }]
-          break
-
-        case 'bar':
-          baseOption.series = [{
-            name: title,
-            type: 'bar',
-            data: data,
-            itemStyle: {
-              color: color
-            }
-          }]
-          break
-
-        case 'area':
-          baseOption.series = [{
-            name: title,
-            type: 'line',
-            data: data,
-            smooth: true,
-            lineStyle: {
-              color: color,
-              width: 2
-            },
-            itemStyle: {
-              color: color
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [{
-                  offset: 0, color: color + '80'
-                }, {
-                  offset: 1, color: color + '20'
-                }]
-              }
-            }
-          }]
-          break
-
-        case 'pie':
-          baseOption.series = [{
-            name: title,
-            type: 'pie',
-            radius: '50%',
-            data: data.map((value, index) => ({
-              name: timeLabels[index],
-              value: value
-            })),
-            itemStyle: {
-              color: (params) => {
-                const colors = [color, color + '80', color + '60', color + '40']
-                return colors[params.dataIndex % colors.length]
-              }
-            },
-            label: {
-              show: false
-            },
-            labelLine: {
-              show: false
-            }
-          }]
-          baseOption.xAxis = { show: false }
-          baseOption.yAxis = { show: false }
-          baseOption.grid = { show: false }
-          break
-
-        default:
-          baseOption.series = [{
-            name: title,
-            type: 'line',
-            data: data,
-            smooth: true,
-            lineStyle: { color: color },
-            itemStyle: { color: color }
-          }]
-      }
-
-      return baseOption
+    // Draw grid lines
+    ctx.strokeStyle = '#f3f4f6'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 4; i++) {
+      const y = padding + (chartHeight / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(padding, y)
+      ctx.lineTo(padding + chartWidth, y)
+      ctx.stroke()
     }
-
-    chartInstance.current.setOption(getChartOption())
-
-    // Handle resize
-    const handleResize = () => {
-      if (chartInstance.current) {
-        chartInstance.current.resize()
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      if (chartInstance.current) {
-        chartInstance.current.dispose()
-      }
-    }
-  }, [title, chartType, data, timeLabels, color])
-
-  // MQTT data subscription
-  useEffect(() => {
-    if (!mqttTopic) return
-
-    const handleMqttData = (message, topic) => {
-      if (topic === mqttTopic && message.value !== undefined) {
-        setConnected(true)
-        setLastValue(message.value)
-        
-        const now = new Date()
-        
-        setData(prevData => {
-          const newData = [...prevData.slice(1), message.value]
-          return newData
-        })
-        
-        setTimeLabels(prevLabels => {
-          const newLabels = [...prevLabels.slice(1), now.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })]
-          return newLabels
-        })
-      }
-    }
-
-    // Generate mock data for demo
-    const generateMockData = () => {
-      const now = new Date()
-      const newData = {
-        timestamp: now.toISOString(),
-        value: Math.random() * 100,
-        topic: mqttTopic
-      }
-      handleMqttData(newData)
-    }
-
-    // Set up mock data generation
-    const interval = setInterval(generateMockData, 2000)
-    setConnected(true)
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [mqttTopic])
-
-  // Fallback: Generate random data if no MQTT topic is provided
-  useEffect(() => {
-    if (mqttTopic) return // Only use fallback if no MQTT topic
-
-    const interval = setInterval(() => {
-      const newValue = Math.random() * 100
-      const now = new Date()
-      
-      setData(prevData => {
-        const newData = [...prevData.slice(1), newValue]
-        return newData
-      })
-      
-      setTimeLabels(prevLabels => {
-        const newLabels = [...prevLabels.slice(1), now.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })]
-        return newLabels
-      })
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [mqttTopic])
+  }, [data, color])
 
   return (
-    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-1.5 sm:p-2 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0">
-        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{title}</h3>
-        <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500 hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
+    <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <h3 className="text-sm font-bold text-gray-800 truncate">{title}</h3>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-xs font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
+            {connected ? 'Live' : 'Offline'}
+          </span>
         </div>
       </div>
       
-      <div className="flex-1 flex justify-center items-center min-h-0 overflow-hidden">
-        <div 
-          ref={chartRef}
-          className="w-full h-full max-w-full max-h-full"
-          style={{ minHeight: '80px' }}
-        />
-      </div>
-      
-      <div className="mt-1 sm:mt-2 text-center flex-shrink-0">
-        <div className="text-xs text-gray-600">
-          {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
-        </div>
-        {mqttTopic && (
-          <div className="text-xs text-gray-400 mt-1 truncate">
-            {mqttTopic}
+      {/* Chart */}
+      <div className="flex-1 p-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="relative h-full">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full drop-shadow-sm"
+            style={{ minHeight: '140px' }}
+          />
+          {/* Chart overlay info */}
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1">
+            <div className="text-xs font-medium text-gray-600">
+              {validData.length} data points
+            </div>
           </div>
-        )}
+        </div>
+      </div>
+      
+      {/* Footer */}
+      <div className="px-4 pb-4 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-gray-600 font-medium">
+            {deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="text-xs text-gray-500">
+              Max: {validData.length > 0 ? Math.max(...validData) : 0}
+            </div>
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+          </div>
+        </div>
+        {/* Chart type indicator */}
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-xs text-gray-500">
+            {chartType.toUpperCase()} CHART
+          </div>
+          <div className="flex space-x-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="w-1 h-3 bg-blue-500 rounded-full opacity-60"></div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
-
-// Memoized component for better performance
-export default memo(ChartWidget)

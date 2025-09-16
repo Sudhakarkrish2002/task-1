@@ -190,9 +190,9 @@ function Contact() {
   const getColorClasses = (color) => {
     const colorMap = {
       blue: {
-        bg: 'bg-blue-100',
-        text: 'text-blue-600',
-        border: 'border-blue-200'
+        bg: 'bg-red-100',
+        text: 'text-red-600',
+        border: 'border-red-200'
       },
       green: {
         bg: 'bg-green-100',

@@ -247,7 +247,7 @@ function MyPanels() {
                   </div>
                   <div className="flex items-center space-x-1">
                     {panel.isShared && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full" title="Shared"></div>
+                      <div className="w-2 h-2 bg-red-500 rounded-full" title="Shared"></div>
                     )}
                     <button className="p-1 text-gray-400 hover:text-gray-600">
                       <MoreVertical className="w-4 h-4" />
@@ -352,7 +352,7 @@ function MyPanels() {
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">{panel.name}</div>
                         {panel.isShared && (
-                          <div className="ml-2 w-2 h-2 bg-blue-500 rounded-full" title="Shared"></div>
+                          <div className="ml-2 w-2 h-2 bg-red-500 rounded-full" title="Shared"></div>
                         )}
                       </div>
                     </td>
@@ -369,7 +369,7 @@ function MyPanels() {
                       <div className="flex items-center space-x-2">
                         <button 
                           onClick={() => handleEditPanel(panel)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-red-600 hover:text-red-900"
                           title="Edit Panel"
                         >
                           <Edit className="w-4 h-4" />

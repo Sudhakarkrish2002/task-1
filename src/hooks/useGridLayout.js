@@ -44,14 +44,32 @@ export const useGridLayout = (options = {}) => {
   const [isValidating, setIsValidating] = useState(false)
   
   const validationTimeoutRef = useRef(null)
+  const widgetsFixedRef = useRef(false)
 
   // Fix widget min/max values when initial widgets are loaded
   useEffect(() => {
     if (initialWidgets.length > 0) {
       const fixedWidgets = fixWidgetMinMaxValues(initialWidgets)
       setWidgets(fixedWidgets)
+      widgetsFixedRef.current = true
     }
   }, [initialWidgets])
+
+  // Fix widgets once when they are first loaded to ensure valid min/max values
+  useEffect(() => {
+    if (widgets.length > 0 && !widgetsFixedRef.current) {
+      const needsFixing = widgets.some(widget => 
+        widget.minW >= widget.w || widget.minH >= widget.h
+      )
+      
+      if (needsFixing) {
+        console.log('Fixing widget min/max values for existing widgets')
+        const fixedWidgets = fixWidgetMinMaxValues(widgets)
+        setWidgets(fixedWidgets)
+      }
+      widgetsFixedRef.current = true
+    }
+  }, [widgets])
 
   // Load initial layouts when they change
   useEffect(() => {
@@ -93,9 +111,9 @@ export const useGridLayout = (options = {}) => {
     [enableOverlapPrevention, enableAutoFix, gridCols, debounceMs]
   )
 
-  // Validate widgets whenever they change
+  // Validate widgets whenever they change (but not during drag operations)
   useEffect(() => {
-    if (widgets.length > 0) {
+    if (widgets.length > 0 && !window.isDragging) {
       debouncedValidate(widgets)
     }
   }, [widgets, debouncedValidate])
@@ -127,6 +145,8 @@ export const useGridLayout = (options = {}) => {
     }
     
     const widgetSize = getWidgetSize(widgetType)
+    console.log('🔍 Creating widget:', widgetType, 'with size:', widgetSize)
+    
     const newWidget = widgetOptions.position 
       ? {
           i: generateWidgetId(),
@@ -135,15 +155,26 @@ export const useGridLayout = (options = {}) => {
           y: widgetOptions.position.y,
           w: widgetSize.w,
           h: widgetSize.h,
-          minW: widgetSize.minW || 2,
-          minH: widgetSize.minH || 2,
-          maxW: 12,
-          maxH: 10,
+          minW: Math.max(1, Math.min(widgetSize.minW || 1, widgetSize.w - 1)),
+          minH: Math.max(1, Math.min(widgetSize.minH || 1, widgetSize.h - 1)),
+          maxW: widgetSize.maxW || 12,
+          maxH: widgetSize.maxH || 10,
           static: false,
           ...defaultSettings, // Apply default settings
           ...widgetOptions // Override with any provided options
         }
       : createWidget(widgetType, widgets, widgetOptions)
+    
+    console.log('🔍 Created widget:', {
+      id: newWidget.i,
+      type: newWidget.type,
+      w: newWidget.w,
+      h: newWidget.h,
+      minW: newWidget.minW,
+      minH: newWidget.minH,
+      maxW: newWidget.maxW,
+      maxH: newWidget.maxH
+    })
     
     setWidgets(prev => {
       const updatedWidgets = [...prev, newWidget]
@@ -246,10 +277,10 @@ export const useGridLayout = (options = {}) => {
       // Preserve the current size (w, h) and min/max constraints
       w: widgetToDuplicate.w,
       h: widgetToDuplicate.h,
-      minW: widgetToDuplicate.minW,
-      minH: widgetToDuplicate.minH,
-      maxW: widgetToDuplicate.maxW,
-      maxH: widgetToDuplicate.maxH
+      minW: Math.max(1, Math.min(widgetToDuplicate.minW || 1, widgetToDuplicate.w - 1)),
+      minH: Math.max(1, Math.min(widgetToDuplicate.minH || 1, widgetToDuplicate.h - 1)),
+      maxW: widgetToDuplicate.maxW || 12,
+      maxH: widgetToDuplicate.maxH || 10
     }
 
     // Debug: Log the duplicated widget to verify size preservation
@@ -306,25 +337,58 @@ export const useGridLayout = (options = {}) => {
     return duplicatedWidget
   }, [widgets, gridCols, maxRows])
 
-  // Handle layout changes from React-Grid-Layout
+  // Optimized throttled layout change handler
+  const throttledLayoutChange = useCallback(
+    debounce((layout, layouts) => {
+      // Use requestAnimationFrame for smooth updates
+      requestAnimationFrame(() => {
+        setLayouts(layouts)
+        
+        // Update widget positions and sizes
+        setWidgets(prev => {
+          const updatedWidgets = prev.map(widget => {
+            const layoutItem = layout.find(item => item.i === widget.i)
+            if (layoutItem) {
+              return {
+                ...widget,
+                x: layoutItem.x,
+                y: layoutItem.y,
+                w: layoutItem.w,
+                h: layoutItem.h
+              }
+            }
+            return widget
+          })
+          
+          // Only check for overlaps if enabled and not during drag operations
+          // Also skip validation if we're in the middle of auto-fixing
+          if (enableOverlapPrevention && !window.isDragging && !isValidating) {
+            const detectedOverlaps = validateWidgetPositions(updatedWidgets)
+            
+            if (detectedOverlaps.length > 0 && enableAutoFix) {
+              console.log('Layout change detected overlaps, applying auto-fix')
+              const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
+              return fixedWidgets
+            }
+          }
+          
+          return updatedWidgets
+        })
+      })
+    }, 100), // Increased throttle to 100ms for better performance
+    [enableOverlapPrevention, enableAutoFix, gridCols, isValidating]
+  )
+
+  // Handle layout changes from React-Grid-Layout with throttling
   const onLayoutChange = useCallback((layout, layouts) => {
+    // Immediate update for responsive layouts
     setLayouts(layouts)
     
-    // Update widget positions and sizes
+    // Update widgets immediately for the current breakpoint (lg)
     setWidgets(prev => {
       const updatedWidgets = prev.map(widget => {
         const layoutItem = layout.find(item => item.i === widget.i)
         if (layoutItem) {
-          // Debug: Log size changes to see if resize is captured
-          if (widget.w !== layoutItem.w || widget.h !== layoutItem.h) {
-            console.log('Widget resize detected:', {
-              id: widget.i,
-              type: widget.type,
-              oldSize: { w: widget.w, h: widget.h },
-              newSize: { w: layoutItem.w, h: layoutItem.h }
-            })
-          }
-          
           return {
             ...widget,
             x: layoutItem.x,
@@ -336,34 +400,52 @@ export const useGridLayout = (options = {}) => {
         return widget
       })
       
-      // Check for overlaps after layout changes (resize/move operations)
-      if (enableOverlapPrevention) {
+      // Only validate if not during drag operations
+      if (enableOverlapPrevention && !window.isDragging && !isValidating) {
         const detectedOverlaps = validateWidgetPositions(updatedWidgets)
-        console.log('Layout change overlap detection:', detectedOverlaps)
-        
-        if (detectedOverlaps.length > 0) {
-          console.log('Overlaps detected after layout change, applying auto-fix')
-          if (enableAutoFix) {
-            const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
-            console.log('Fixed widgets after layout change:', fixedWidgets)
-            return fixedWidgets
-          } else {
-            console.warn('Overlaps detected after layout change but auto-fix is disabled')
-          }
-        } else {
-          console.log('No overlaps detected after layout change')
+        if (detectedOverlaps.length > 0 && enableAutoFix) {
+          console.log('Layout change detected overlaps, applying auto-fix')
+          const fixedWidgets = autoFixOverlaps(updatedWidgets, gridCols)
+          return fixedWidgets
         }
       }
       
       return updatedWidgets
     })
-  }, [enableOverlapPrevention, enableAutoFix, gridCols])
+    
+    // Throttled layout updates for performance
+    throttledLayoutChange(layout, layouts)
+  }, [throttledLayoutChange, enableOverlapPrevention, enableAutoFix, gridCols, isValidating])
 
-  // Move widget to a specific position
-  const moveWidget = useCallback((widgetId, newPosition) => {
+  // Move widget to a specific position with smooth animation
+  const moveWidget = useCallback((widgetId, newPosition, options = {}) => {
     const { x, y } = newPosition
+    const { animated = true, duration = 300 } = options
+    
+    if (animated) {
+      // Add smooth movement class for CSS animations
+      const element = document.querySelector(`[data-grid="${widgetId}"]`)
+      if (element) {
+        element.classList.add('smooth-move')
+        setTimeout(() => {
+          element.classList.remove('smooth-move')
+        }, duration)
+      }
+    }
+    
     updateWidget(widgetId, { x, y })
   }, [updateWidget])
+
+  // Move multiple widgets with staggered animations
+  const moveWidgets = useCallback((widgetMoves, options = {}) => {
+    const { staggerDelay = 100, duration = 300 } = options
+    
+    widgetMoves.forEach((move, index) => {
+      setTimeout(() => {
+        moveWidget(move.widgetId, move.position, { animated: true, duration })
+      }, index * staggerDelay)
+    })
+  }, [moveWidget])
 
   // Resize widget
   const resizeWidget = useCallback((widgetId, newSize) => {
@@ -466,6 +548,7 @@ export const useGridLayout = (options = {}) => {
     updateWidget,
     duplicateWidget,
     moveWidget,
+    moveWidgets,
     resizeWidget,
     clearWidgets,
     resetWidgets,

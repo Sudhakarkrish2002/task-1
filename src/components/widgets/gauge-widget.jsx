@@ -1,165 +1,129 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
+import { useAutoValue } from '../../hooks/useAutoValue'
 
 export const GaugeWidget = ({ 
   widgetId,
-  mqttTopic,
   title = 'Gauge',
-  value = 0, 
-  max = 100, 
   min = 0,
-  unit = '',
-  label, 
-  color = 'primary',
-  size = 'medium'
+  max = 100,
+  unit = '%',
+  color = '#ef4444',
+  panelId = 'default',
+  autoGenerate = true
 }) => {
+  const { value, connected, deviceInfo } = useAutoValue(
+    widgetId, 
+    'gauge', 
+    { min, max, unit }, 
+    panelId, 
+    autoGenerate
+  )
   const canvasRef = useRef(null)
-  const [currentValue, setCurrentValue] = useState(value)
-  const [connected, setConnected] = useState(false)
-  
-  // Use provided value
-  useEffect(() => {
-    if (value !== undefined) {
-      setCurrentValue(value)
-    }
-  }, [value])
 
-  // MQTT data subscription
-  useEffect(() => {
-    if (!mqttTopic) return
+  // Validate values to prevent errors
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0
+  const safeMin = typeof min === 'number' && !isNaN(min) ? min : 0
+  const safeMax = typeof max === 'number' && !isNaN(max) ? max : 100
+  const safeUnit = typeof unit === 'string' ? unit : ''
+  const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin))) * 100
 
-    const handleMqttData = (message, topic) => {
-      if (topic === mqttTopic && message.value !== undefined) {
-        setConnected(true)
-        setCurrentValue(message.value)
-      }
-    }
-
-    // Generate mock data for demo
-    const generateMockData = () => {
-      const newData = {
-        timestamp: new Date().toISOString(),
-        value: Math.random() * (max - min) + min,
-        topic: mqttTopic
-      }
-      handleMqttData(newData)
-    }
-
-    // Set up mock data generation
-    const interval = setInterval(generateMockData, 2000)
-    setConnected(true)
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [mqttTopic])
-
-  // Determine color based on value and thresholds
-  const getGaugeColor = (val) => {
-    if (val < (max - min) * 0.3) return 'success'
-    if (val < (max - min) * 0.7) return 'warning'
-    return 'error'
-  }
-
-  const gaugeColor = getGaugeColor(currentValue)
-
+  // Draw gauge
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Get the actual display size
     const rect = canvas.getBoundingClientRect()
-    const displayWidth = rect.width
-    const displayHeight = rect.height
-
-    // Set the internal resolution to match the display size
-    canvas.width = displayWidth * window.devicePixelRatio
-    canvas.height = displayHeight * window.devicePixelRatio
-
-    // Scale the context to match the device pixel ratio
+    
+    canvas.width = rect.width * window.devicePixelRatio
+    canvas.height = rect.height * window.devicePixelRatio
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
 
-    // Clear canvas
-    ctx.clearRect(0, 0, displayWidth, displayHeight)
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const radius = Math.max(Math.min(centerX, centerY) - 15, 10) // Ensure minimum radius
 
-    // Draw gauge
-    const centerX = displayWidth / 2
-    const centerY = displayHeight / 2
-    const radius = Math.min(centerX, centerY) - 20
+    // Clear canvas
+    ctx.clearRect(0, 0, rect.width, rect.height)
 
     // Background arc
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
-    ctx.lineWidth = 15
-    ctx.strokeStyle = '#e2e8f0'
+    ctx.lineWidth = 12
+    ctx.strokeStyle = '#e5e7eb'
     ctx.stroke()
 
     // Value arc
-    const percentage = (currentValue - min) / (max - min)
+    const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
     const angle = Math.PI + (percentage * Math.PI)
-    
-    // Color mapping
-    const colorMap = {
-      primary: '#3b82f6',
-      success: '#10b981',
-      warning: '#f59e0b',
-      error: '#ef4444',
-      accent: '#06b6d4'
-    }
     
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, Math.PI, angle)
-    ctx.lineWidth = 15
-    ctx.strokeStyle = colorMap[gaugeColor] || colorMap.primary
+    ctx.lineWidth = 12
+    ctx.strokeStyle = color
     ctx.stroke()
 
-    // Value text - responsive font size
-    ctx.fillStyle = '#1e293b'
-    const fontSize = Math.max(12, Math.min(18, radius * 0.3))
-    ctx.font = `bold ${fontSize}px Inter, sans-serif`
+    // Title text only (value is shown in overlay)
+    ctx.fillStyle = '#6b7280'
+    ctx.font = '12px Inter, sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText(`${currentValue}${unit}`, centerX, centerY + 6)
-
-    // Label text - responsive font size
-    ctx.fillStyle = '#64748b'
-    const labelFontSize = Math.max(8, Math.min(12, radius * 0.2))
-    ctx.font = `${labelFontSize}px Inter, sans-serif`
-    ctx.fillText(label || title, centerX, centerY + 25)
-  }, [currentValue, max, min, unit, label, title, gaugeColor])
+    ctx.fillText(title, centerX, centerY + 15)
+  }, [value, min, max, unit, color, title])
 
   return (
-    <div className="w-full h-full bg-white rounded-lg border border-gray-200 p-1.5 sm:p-2 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between mb-1 sm:mb-2 flex-shrink-0">
-        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{title}</h3>
-        <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500 hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
+    <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+          <h3 className="text-sm font-bold text-gray-800 truncate">{title}</h3>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-xs font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
+            {connected ? 'Live' : 'Offline'}
+          </span>
         </div>
       </div>
       
-      <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
-        <div className="relative w-full h-full flex items-center justify-center">
+      {/* Gauge */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-b from-white to-gray-50">
+        <div className="relative">
           <canvas
             ref={canvasRef}
-            className="w-full h-full max-w-full max-h-full"
-            style={{ 
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            }}
+            className="drop-shadow-lg"
+            style={{ maxWidth: '140px', maxHeight: '100px' }}
           />
+          {/* Value overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-800 mb-1">
+                {safeValue}
+              </div>
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                {safeUnit}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div className="mt-1 sm:mt-2 text-center flex-shrink-0">
-        <div className="text-xs text-gray-600">
-          {mqttTopic && (
-            <div className="text-xs text-gray-400 mt-1 truncate">
-              {mqttTopic}
-            </div>
-          )}
+      {/* Footer */}
+      <div className="px-4 pb-4 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-gray-600 font-medium">
+            {deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : `Range: ${safeMin} - ${safeMax} ${safeUnit}`}
+          </div>
+          <div className="text-xs text-gray-500">
+            {Math.round(percentage)}%
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className="bg-gradient-to-r from-blue-500 to-blue-600 h-1 rounded-full transition-all duration-500"
+            style={{ width: `${percentage}%` }}
+          ></div>
         </div>
       </div>
     </div>

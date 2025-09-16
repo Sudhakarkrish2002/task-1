@@ -38,7 +38,7 @@ const Toast = ({
       case 'warning':
         return <AlertTriangle className="w-5 h-5 text-yellow-500" />
       default:
-        return <Info className="w-5 h-5 text-blue-500" />
+        return <Info className="w-5 h-5 text-red-500" />
     }
   }
 
@@ -51,7 +51,7 @@ const Toast = ({
       case 'warning':
         return 'bg-yellow-50 border-yellow-200 text-yellow-800'
       default:
-        return 'bg-blue-50 border-blue-200 text-blue-800'
+        return 'bg-red-50 border-red-200 text-red-800'
     }
   }
 

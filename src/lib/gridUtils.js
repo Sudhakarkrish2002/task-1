@@ -12,12 +12,20 @@
 export const checkCollision = (item1, item2) => {
   if (!item1 || !item2) return false
   
-  return !(
-    item1.x >= item2.x + item2.w ||
-    item2.x >= item1.x + item1.w ||
-    item1.y >= item2.y + item2.h ||
-    item2.y >= item1.y + item1.h
-  )
+  // Check if items are the same (should not collide with themselves)
+  if (item1.i === item2.i) return false
+  
+  // Calculate boundaries
+  const item1Right = item1.x + item1.w
+  const item1Bottom = item1.y + item1.h
+  const item2Right = item2.x + item2.w
+  const item2Bottom = item2.y + item2.h
+  
+  // Check for overlap - items overlap if they intersect in both x and y axes
+  const overlapX = !(item1Right <= item2.x || item2Right <= item1.x)
+  const overlapY = !(item1Bottom <= item2.y || item2Bottom <= item1.y)
+  
+  return overlapX && overlapY
 }
 
 /**
@@ -87,13 +95,13 @@ export const findNextAvailablePosition = (widgets, newWidgetSize, gridCols = 12,
   // Find the first available position that can fit the new widget
   // Allow placement at the very bottom by extending the search range
   for (let y = 0; y < maxRows; y++) {
-    for (let x = 0; x < gridCols - newWidgetSize.w + 1; x++) {
+    for (let x = 0; x <= gridCols - newWidgetSize.w; x++) {
       // Check if the area is free
       let canPlace = true
       for (let dy = 0; dy < newWidgetSize.h; dy++) {
         for (let dx = 0; dx < newWidgetSize.w; dx++) {
-          // Allow extending beyond maxRows for bottom placement
-          if (x + dx >= gridCols || (y + dy < maxRows && grid[y + dy][x + dx])) {
+          // Check bounds and occupancy
+          if (x + dx >= gridCols || y + dy >= maxRows || grid[y + dy][x + dx]) {
             canPlace = false
             break
           }
@@ -129,59 +137,114 @@ export const autoFixOverlaps = (widgets, gridCols = 12) => {
   
   console.log('Auto-fixing overlaps:', overlaps)
   
+  // Create a grid to track occupied positions
+  const maxRows = 1000
+  const grid = Array(maxRows).fill(null).map(() => Array(gridCols).fill(false))
+  
   // Sort widgets by y position, then by x position to maintain order
   fixedWidgets.sort((a, b) => {
     if (a.y !== b.y) return a.y - b.y
     return a.x - b.x
   })
   
-  // Fix overlaps by repositioning conflicting widgets
+  // Mark initial occupied positions
+  fixedWidgets.forEach(widget => {
+    if (widget && typeof widget.x === 'number' && typeof widget.y === 'number') {
+      for (let y = widget.y; y < widget.y + (widget.h || 1); y++) {
+        for (let x = widget.x; x < widget.x + (widget.w || 1); x++) {
+          if (y < grid.length && x < grid[y].length) {
+            grid[y][x] = true
+          }
+        }
+      }
+    }
+  })
+  
+  // Fix overlaps by finding new positions for overlapping widgets
   for (let i = 0; i < fixedWidgets.length; i++) {
     const currentWidget = fixedWidgets[i]
     
     // Check for overlaps with all other widgets
-    for (let j = 0; j < fixedWidgets.length; j++) {
-      if (i === j) continue
-      
+    for (let j = i + 1; j < fixedWidgets.length; j++) {
       const otherWidget = fixedWidgets[j]
       
       if (checkCollision(currentWidget, otherWidget)) {
         console.log(`Fixing overlap between ${currentWidget.i} and ${otherWidget.i}`)
         
-        // Try to move current widget to the right first
-        const newX = otherWidget.x + otherWidget.w
-        if (newX + currentWidget.w <= gridCols) {
-          currentWidget.x = newX
-          console.log(`Moved ${currentWidget.i} to x: ${newX}`)
-        } else {
-          // Try to move to the next row
-          const newY = otherWidget.y + otherWidget.h
-          currentWidget.x = 0
-          currentWidget.y = newY
-          console.log(`Moved ${currentWidget.i} to next row: x: 0, y: ${newY}`)
-        }
-        
-        // Re-check for overlaps after moving
-        let stillOverlapping = false
-        for (let k = 0; k < fixedWidgets.length; k++) {
-          if (i === k) continue
-          if (checkCollision(currentWidget, fixedWidgets[k])) {
-            stillOverlapping = true
-            break
+        // Clear current widget's position in grid
+        for (let y = currentWidget.y; y < currentWidget.y + currentWidget.h; y++) {
+          for (let x = currentWidget.x; x < currentWidget.x + currentWidget.w; x++) {
+            if (y < grid.length && x < grid[y].length) {
+              grid[y][x] = false
+            }
           }
         }
         
-        // If still overlapping, try a different position
-        if (stillOverlapping) {
-          const nextAvailablePosition = findNextAvailablePosition(
+        // Find new position for current widget
+        let newPosition = null
+        
+        // Try to place to the right of the other widget first
+        const rightX = otherWidget.x + otherWidget.w
+        if (rightX + currentWidget.w <= gridCols) {
+          // Check if this position is available
+          let canPlace = true
+          for (let y = otherWidget.y; y < otherWidget.y + currentWidget.h; y++) {
+            for (let x = rightX; x < rightX + currentWidget.w; x++) {
+              if (y < grid.length && x < grid[y].length && grid[y][x]) {
+                canPlace = false
+                break
+              }
+            }
+            if (!canPlace) break
+          }
+          
+          if (canPlace) {
+            newPosition = { x: rightX, y: otherWidget.y }
+          }
+        }
+        
+        // If right placement doesn't work, try below
+        if (!newPosition) {
+          const belowY = otherWidget.y + otherWidget.h
+          let canPlace = true
+          for (let y = belowY; y < belowY + currentWidget.h; y++) {
+            for (let x = 0; x < currentWidget.w; x++) {
+              if (y < grid.length && x < grid[y].length && grid[y][x]) {
+                canPlace = false
+                break
+              }
+            }
+            if (!canPlace) break
+          }
+          
+          if (canPlace) {
+            newPosition = { x: 0, y: belowY }
+          }
+        }
+        
+        // If still no position, find next available position
+        if (!newPosition) {
+          newPosition = findNextAvailablePosition(
             fixedWidgets.filter((_, index) => index !== i), 
             { w: currentWidget.w, h: currentWidget.h }, 
             gridCols
           )
-          currentWidget.x = nextAvailablePosition.x
-          currentWidget.y = nextAvailablePosition.y
-          console.log(`Moved ${currentWidget.i} to available position: x: ${nextAvailablePosition.x}, y: ${nextAvailablePosition.y}`)
         }
+        
+        // Update widget position
+        currentWidget.x = newPosition.x
+        currentWidget.y = newPosition.y
+        
+        // Mark new position as occupied
+        for (let y = currentWidget.y; y < currentWidget.y + currentWidget.h; y++) {
+          for (let x = currentWidget.x; x < currentWidget.x + currentWidget.w; x++) {
+            if (y < grid.length && x < grid[y].length) {
+              grid[y][x] = true
+            }
+          }
+        }
+        
+        console.log(`Moved ${currentWidget.i} to position: x: ${newPosition.x}, y: ${newPosition.y}`)
       }
     }
   }
@@ -201,21 +264,21 @@ export const generateWidgetId = (prefix = 'widget') => {
 /**
  * Get standard widget size based on type
  * @param {string} widgetType - Type of widget
- * @returns {Object} - Widget size {w, h}
+ * @returns {Object} - Widget size {w, h, minW, minH, maxW, maxH}
  */
 export const getWidgetSize = (widgetType) => {
   const sizeMap = {
-    'gauge': { w: 3, h: 3, minW: 2, minH: 2 },
-    'chart': { w: 4, h: 4, minW: 3, minH: 3 },
-    'toggle': { w: 2, h: 2, minW: 2, minH: 2 },
-    'slider': { w: 3, h: 3, minW: 2, minH: 2 },
-    'map': { w: 6, h: 5, minW: 4, minH: 4 },
-    '3d-model': { w: 4, h: 4, minW: 3, minH: 3 },
-    'notification': { w: 3, h: 4, minW: 2, minH: 3 },
-    'sensor-tile': { w: 3, h: 3, minW: 2, minH: 2 }
+    'gauge': { w: 3, h: 3, minW: 2, minH: 2, maxW: 6, maxH: 6 },
+    'chart': { w: 4, h: 4, minW: 3, minH: 3, maxW: 12, maxH: 8 },
+    'toggle': { w: 2, h: 2, minW: 1, minH: 1, maxW: 4, maxH: 4 },
+    'slider': { w: 3, h: 3, minW: 2, minH: 2, maxW: 6, maxH: 6 },
+    'map': { w: 6, h: 5, minW: 4, minH: 4, maxW: 12, maxH: 10 },
+    '3d-model': { w: 4, h: 5, minW: 3, minH: 4, maxW: 8, maxH: 10 },
+    'notification': { w: 3, h: 4, minW: 2, minH: 3, maxW: 6, maxH: 8 },
+    'sensor-tile': { w: 3, h: 3, minW: 2, minH: 2, maxW: 6, maxH: 6 }
   }
   
-  return sizeMap[widgetType] || { w: 3, h: 3, minW: 2, minH: 2 }
+  return sizeMap[widgetType] || { w: 3, h: 3, minW: 1, minH: 1, maxW: 12, maxH: 10 }
 }
 
 /**
@@ -243,10 +306,18 @@ export const validateWidget = (widget) => {
   }
   
   // Ensure min/max values are valid and logical
-  validatedWidget.minW = Math.max(1, Math.min(validatedWidget.minW, validatedWidget.w))
-  validatedWidget.minH = Math.max(1, Math.min(validatedWidget.minH, validatedWidget.h))
+  validatedWidget.minW = Math.max(1, Math.min(validatedWidget.minW, validatedWidget.w - 1))
+  validatedWidget.minH = Math.max(1, Math.min(validatedWidget.minH, validatedWidget.h - 1))
   validatedWidget.maxW = Math.max(validatedWidget.w, Math.min(12, validatedWidget.maxW))
   validatedWidget.maxH = Math.max(validatedWidget.h, Math.min(10, validatedWidget.maxH))
+  
+  // Ensure minW is always less than w, and minH is always less than h
+  if (validatedWidget.minW >= validatedWidget.w) {
+    validatedWidget.minW = Math.max(1, validatedWidget.w - 1)
+  }
+  if (validatedWidget.minH >= validatedWidget.h) {
+    validatedWidget.minH = Math.max(1, validatedWidget.h - 1)
+  }
   
   return validatedWidget
 }
@@ -290,10 +361,10 @@ export const createWidget = (widgetType, existingWidgets = [], options = {}) => 
     y: position.y,
     w: size.w,
     h: size.h,
-    minW: size.minW || 2, // Use widget-specific minimum width
-    minH: size.minH || 2, // Use widget-specific minimum height
-    maxW: 12, // Allow maximum width of 12 (full grid)
-    maxH: 10, // Allow maximum height of 10
+    minW: Math.max(1, Math.min(size.minW || 1, size.w - 1)), // Ensure minW < w
+    minH: Math.max(1, Math.min(size.minH || 1, size.h - 1)), // Ensure minH < h
+    maxW: size.maxW || 12, // Use widget-specific maximum width
+    maxH: size.maxH || 10, // Use widget-specific maximum height
     static: false,
     ...defaultSettings, // Apply default settings
     ...options // Override with any provided options
@@ -311,17 +382,32 @@ export const fixWidgetMinMaxValues = (widgets) => {
   return widgets.map(widget => {
     const fixedWidget = {
       ...widget,
-      minW: 1,
-      minH: 1,
-      maxW: 12,
-      maxH: 10
+      // Ensure all required properties exist
+      w: widget.w || 3,
+      h: widget.h || 2,
+      minW: widget.minW || 1,
+      minH: widget.minH || 1,
+      maxW: widget.maxW || 12,
+      maxH: widget.maxH || 10
     }
     
     // Ensure min/max values are valid and logical
-    fixedWidget.minW = Math.max(1, Math.min(fixedWidget.minW, fixedWidget.w))
-    fixedWidget.minH = Math.max(1, Math.min(fixedWidget.minH, fixedWidget.h))
+    fixedWidget.minW = Math.max(1, Math.min(fixedWidget.minW, fixedWidget.w - 1))
+    fixedWidget.minH = Math.max(1, Math.min(fixedWidget.minH, fixedWidget.h - 1))
     fixedWidget.maxW = Math.max(fixedWidget.w, Math.min(12, fixedWidget.maxW))
     fixedWidget.maxH = Math.max(fixedWidget.h, Math.min(10, fixedWidget.maxH))
+    
+    // Final safety check - ensure minW is always less than w, and minH is always less than h
+    if (fixedWidget.minW >= fixedWidget.w) {
+      fixedWidget.minW = Math.max(1, fixedWidget.w - 1)
+    }
+    if (fixedWidget.minH >= fixedWidget.h) {
+      fixedWidget.minH = Math.max(1, fixedWidget.h - 1)
+    }
+    
+    // Ensure w and h are at least 1
+    fixedWidget.w = Math.max(1, fixedWidget.w)
+    fixedWidget.h = Math.max(1, fixedWidget.h)
     
     return fixedWidget
   })
@@ -374,14 +460,14 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   isDraggable: !isPreviewMode,
   isResizable: !isPreviewMode,
   margin: GRID_CONFIG.margin,
-  containerPadding: isPreviewMode ? [20, 20, 40, 20] : GRID_CONFIG.containerPadding,
+  containerPadding: isPreviewMode ? [20, 20, 100, 20] : GRID_CONFIG.containerPadding,
   useCSSTransforms: true,
   transformScale: 1,
   draggableHandle: null, // Allow dragging from anywhere on the widget
-  preventCollision: GRID_CONFIG.preventCollision, // Use config value
-  compactType: GRID_CONFIG.compactType, // Use config value
+  preventCollision: true, // Always prevent collision
+  compactType: 'vertical', // Always use vertical compacting
   autoSize: isPreviewMode ? false : GRID_CONFIG.autoSize, // Disable autoSize in preview mode
-  allowOverlap: GRID_CONFIG.allowOverlap,
+  allowOverlap: false, // Never allow overlaps
   isBounded: isPreviewMode ? false : GRID_CONFIG.isBounded, // Allow unbounded in preview mode for better viewing
   resizeHandles: isPreviewMode ? [] : ['se'],
   maxRows: GRID_CONFIG.maxRows,
@@ -393,10 +479,11 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   // Allow dynamic height expansion for bottom placement
   style: { 
     width: '100%',
-    minHeight: isPreviewMode ? '600px' : '100%',
+    minHeight: isPreviewMode ? '800px' : '100%',
     height: isPreviewMode ? 'auto' : 'auto',
     overflow: isPreviewMode ? 'visible' : 'visible',
-    background: 'transparent' // Remove any background for cleaner look
+    background: 'transparent', // Remove any background for cleaner look
+    paddingBottom: isPreviewMode ? '100px' : '0px' // Add bottom padding for preview mode
   }
 })
 

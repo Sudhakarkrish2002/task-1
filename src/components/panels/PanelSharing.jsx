@@ -60,8 +60,8 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Share2 className="w-6 h-6 text-blue-600" />
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Share2 className="w-6 h-6 text-red-600" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Share Dashboard</h3>
@@ -87,12 +87,12 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
                   onClick={() => setShareMode('view')}
                   className={`p-4 border rounded-lg text-left transition-colors ${
                     shareMode === 'view'
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Eye className={`w-5 h-5 ${shareMode === 'view' ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <Eye className={`w-5 h-5 ${shareMode === 'view' ? 'text-red-600' : 'text-gray-400'}`} />
                     <div>
                       <div className="font-medium text-gray-900">View Only</div>
                       <div className="text-sm text-gray-500">Can view but not edit</div>
@@ -103,12 +103,12 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
                   onClick={() => setShareMode('edit')}
                   className={`p-4 border rounded-lg text-left transition-colors ${
                     shareMode === 'edit'
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Edit className={`w-5 h-5 ${shareMode === 'edit' ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <Edit className={`w-5 h-5 ${shareMode === 'edit' ? 'text-red-600' : 'text-gray-400'}`} />
                     <div>
                       <div className="font-medium text-gray-900">Can Edit</div>
                       <div className="text-sm text-gray-500">Can view and edit</div>
@@ -132,7 +132,7 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
                 />
                 <button
                   onClick={() => copyToClipboard(shareLink, 'link')}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center space-x-2"
                 >
                   {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   <span>{copiedLink ? 'Copied!' : 'Copy'}</span>
@@ -154,7 +154,7 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
                 />
                 <button
                   onClick={() => copyToClipboard(sharePassword, 'password')}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center space-x-2"
                 >
                   {copiedPassword ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   <span>{copiedPassword ? 'Copied!' : 'Copy'}</span>
@@ -176,9 +176,9 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
             </div>
 
             {/* Sharing Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">How to Share:</h4>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-red-900 mb-2">How to Share:</h4>
+              <ol className="text-sm text-red-800 space-y-1 list-decimal list-inside">
                 <li>Copy the share link above</li>
                 <li>Share the link and password with your team</li>
                 <li>Recipients can access the dashboard using the password</li>
@@ -196,7 +196,7 @@ const PanelSharing = ({ isOpen, onClose, panelName, panelId }) => {
               </button>
               <button
                 onClick={handleShare}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center space-x-2"
               >
                 <Share2 className="w-4 h-4" />
                 <span>Share Dashboard</span>

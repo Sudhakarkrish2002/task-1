@@ -80,8 +80,8 @@ function HomePage() {
       icon: BarChart3,
       title: "Real-Time Analytics",
       description: "Advanced data visualization with MATLAB integration and custom analytics",
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
+      color: "text-red-600",
+      bgColor: "bg-red-100"
     },
     {
       icon: Smartphone,
@@ -143,7 +143,7 @@ function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="page-content w-full overflow-x-hidden">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-20"></div>
@@ -214,8 +214,8 @@ function HomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 grid-cols-responsive">
             <div className="text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                <Smartphone className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <Smartphone className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4 text-center">Mobile Apps</h3>
               <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
@@ -369,8 +369,8 @@ function HomePage() {
                 </p>
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                      <Smartphone className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                      <Smartphone className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                     </div>
                     <span className="text-sm sm:text-base text-gray-700">No-code mobile apps with drag-and-drop simplicity</span>
                   </div>

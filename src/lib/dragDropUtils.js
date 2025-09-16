@@ -1,7 +1,52 @@
 /**
  * Professional Drag and Drop Utilities
- * Enhanced positioning logic for better widget placement
+ * Enhanced positioning logic for better widget placement with smooth animations
  */
+
+// Animation configuration
+const ANIMATION_CONFIG = {
+  duration: 200, // Reduced for better responsiveness
+  easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Optimized easing
+  spring: {
+    tension: 300,
+    friction: 30
+  }
+}
+
+// Global drag state for performance optimization
+window.dragState = {
+  isDragging: false,
+  draggedWidgetType: null,
+  lastDragPosition: null,
+  dragStartTime: null
+}
+
+// Optimized throttle function
+const throttle = (func, limit) => {
+  let inThrottle
+  return function() {
+    const args = arguments
+    const context = this
+    if (!inThrottle) {
+      func.apply(context, args)
+      inThrottle = true
+      setTimeout(() => inThrottle = false, limit)
+    }
+  }
+}
+
+// Performance-optimized debounce
+const debounce = (func, wait) => {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
 
 /**
  * Calculate the optimal position for a new widget based on drop coordinates
@@ -20,8 +65,10 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
   }
   
   // Convert drop coordinates to grid coordinates
-  const gridX = Math.floor(dropData.x / (rowHeight + margin[0]))
-  const gridY = Math.floor(dropData.y / (rowHeight + margin[1]))
+  // rowHeight = 80, margin = [16, 16], so total cell size = 96
+  const cellSize = rowHeight + margin[0] // 80 + 16 = 96
+  const gridX = Math.floor(dropData.x / cellSize)
+  const gridY = Math.floor(dropData.y / cellSize)
   
   // Clamp to grid bounds
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
@@ -58,17 +105,16 @@ export const isPositionAvailable = (x, y, size, existingWidgets) => {
     const newRight = x + size.w
     const newBottom = y + size.h
     
-    return !(
-      x >= widgetRight ||
-      newRight <= widget.x ||
-      y >= widgetBottom ||
-      newBottom <= widget.y
-    )
+    // Check for overlap - widgets overlap if they intersect in both x and y axes
+    const overlapX = !(newRight <= widget.x || widgetRight <= x)
+    const overlapY = !(newBottom <= widget.y || widgetBottom <= y)
+    
+    return overlapX && overlapY
   })
 }
 
 /**
- * Find the nearest available position to the desired location
+ * Find the nearest available position to the desired location with smart collision avoidance
  * @param {number} desiredX - Desired X coordinate
  * @param {number} desiredY - Desired Y coordinate
  * @param {Object} size - Widget size
@@ -110,6 +156,137 @@ export const findNearestAvailablePosition = (desiredX, desiredY, size, existingW
     : 0
   
   return { x: 0, y: maxY + 1 }
+}
+
+/**
+ * Smart collision detection with automatic widget repositioning
+ * @param {Object} draggedWidget - The widget being dragged
+ * @param {Array} existingWidgets - Current widgets
+ * @param {Object} newPosition - New position {x, y}
+ * @param {Function} onWidgetMove - Callback for moving widgets
+ * @returns {Object} - Final position and any moved widgets
+ */
+export const handleSmartCollision = (draggedWidget, existingWidgets, newPosition, onWidgetMove) => {
+  const { x: newX, y: newY } = newPosition
+  const draggedSize = { w: draggedWidget.w, h: draggedWidget.h }
+  
+  // Find widgets that would collide with the new position
+  const collidingWidgets = existingWidgets.filter(widget => {
+    if (widget.i === draggedWidget.i) return false // Don't check against self
+    
+    const widgetRight = widget.x + widget.w
+    const widgetBottom = widget.y + widget.h
+    const newRight = newX + draggedSize.w
+    const newBottom = newY + draggedSize.h
+    
+    return !(
+      newX >= widgetRight ||
+      newRight <= widget.x ||
+      newY >= widgetBottom ||
+      newBottom <= widget.y
+    )
+  })
+  
+  if (collidingWidgets.length === 0) {
+    return { position: newPosition, movedWidgets: [] }
+  }
+  
+  // Calculate displacement for colliding widgets
+  const movedWidgets = []
+  const displacement = { x: draggedSize.w, y: 0 } // Default: push right
+  
+  collidingWidgets.forEach(widget => {
+    const newWidgetPosition = {
+      x: Math.min(widget.x + displacement.x, 12 - widget.w),
+      y: widget.y + displacement.y
+    }
+    
+    // If pushing right would go out of bounds, push down instead
+    if (newWidgetPosition.x + widget.w > 12) {
+      newWidgetPosition.x = widget.x
+      newWidgetPosition.y = widget.y + draggedSize.h + 1
+    }
+    
+    // Ensure position is valid
+    if (newWidgetPosition.x < 0) newWidgetPosition.x = 0
+    if (newWidgetPosition.y < 0) newWidgetPosition.y = 0
+    
+    movedWidgets.push({
+      widget,
+      newPosition: newWidgetPosition
+    })
+    
+    // Apply smooth movement
+    if (onWidgetMove) {
+      onWidgetMove(widget.i, newWidgetPosition)
+    }
+  })
+  
+  return { position: newPosition, movedWidgets }
+}
+
+/**
+ * Optimized smooth animation for widget movement using CSS transforms
+ * @param {HTMLElement} element - Element to animate
+ * @param {Object} fromPosition - Starting position
+ * @param {Object} toPosition - Target position
+ * @param {Function} onComplete - Completion callback
+ */
+export const animateWidgetMovement = (element, fromPosition, toPosition, onComplete) => {
+  if (!element) return
+  
+  // Use CSS transitions for better performance
+  element.style.transition = `transform ${ANIMATION_CONFIG.duration}ms ${ANIMATION_CONFIG.easing}`
+  element.style.transform = `translate(${toPosition.x}px, ${toPosition.y}px)`
+  
+  // Add class for additional styling
+  element.classList.add('smooth-move')
+  
+  // Clean up after animation
+  setTimeout(() => {
+    element.classList.remove('smooth-move')
+    if (onComplete) onComplete()
+  }, ANIMATION_CONFIG.duration)
+}
+
+/**
+ * Batch animate multiple widgets for better performance
+ * @param {Array} animations - Array of animation objects
+ * @param {Function} onComplete - Completion callback
+ */
+export const batchAnimateWidgets = (animations, onComplete) => {
+  if (!animations.length) {
+    if (onComplete) onComplete()
+    return
+  }
+  
+  let completedCount = 0
+  const totalAnimations = animations.length
+  
+  animations.forEach((animation, index) => {
+    setTimeout(() => {
+      animateWidgetMovement(
+        animation.element,
+        animation.fromPosition,
+        animation.toPosition,
+        () => {
+          completedCount++
+          if (completedCount === totalAnimations && onComplete) {
+            onComplete()
+          }
+        }
+      )
+    }, index * 50) // Reduced stagger delay for smoother experience
+  })
+}
+
+/**
+ * Easing function for smooth animations
+ * @param {number} t - Progress (0-1)
+ * @returns {number} - Eased progress
+ */
+const easeInOutCubic = (t) => {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
 
 /**
@@ -179,7 +356,7 @@ export const getWidgetSize = (widgetType) => {
     'toggle': { w: 2, h: 2 },
     'slider': { w: 3, h: 3 },
     'notification': { w: 3, h: 4 },
-    '3d-model': { w: 4, h: 4 }
+    '3d-model': { w: 4, h: 5 }
   }
   
   return sizes[widgetType] || { w: 3, h: 3 }
@@ -218,13 +395,19 @@ export const createDropIndicator = (position, size, gridConfig = {}) => {
 }
 
 /**
- * Enhanced drag start handler
+ * Optimized drag start handler with smooth animations
  * @param {Object} event - Drag start event
  * @param {string} widgetType - Widget type
  * @param {Object} options - Additional options
  */
 export const handleProfessionalDragStart = (event, widgetType, options = {}) => {
-  const { setDraggedWidget } = options
+  const { setDraggedWidget, onDragStart } = options
+  
+  // Set global drag state
+  window.dragState.isDragging = true
+  window.dragState.draggedWidgetType = widgetType
+  window.dragState.dragStartTime = performance.now()
+  window.isDragging = true // For compatibility
   
   // Set drag data
   event.dataTransfer.effectAllowed = 'copy'
@@ -238,22 +421,56 @@ export const handleProfessionalDragStart = (event, widgetType, options = {}) => 
     setDraggedWidget(widgetType)
   }
   
-  // Add visual feedback
-  event.target.style.opacity = '0.5'
+  // Use requestAnimationFrame for smooth visual feedback
+  requestAnimationFrame(() => {
+    const element = event.target
+    element.style.transition = `all ${ANIMATION_CONFIG.duration}ms ${ANIMATION_CONFIG.easing}`
+    element.style.opacity = '0.7'
+    element.style.transform = 'scale(1.05) rotate(2deg) translateZ(0)'
+    element.style.zIndex = '1000'
+    element.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'
+    element.style.willChange = 'transform, opacity'
+    
+    // Add drag class for additional styling
+    element.classList.add('dragging')
+  })
   
-  console.log('Professional drag start:', widgetType)
+  // Call custom drag start handler
+  if (onDragStart) {
+    onDragStart(widgetType, event)
+  }
+  
+  console.log('Optimized drag start:', widgetType)
 }
 
 /**
- * Enhanced drag end handler
+ * Optimized drag end handler with smooth reset animations
  * @param {Object} event - Drag end event
  * @param {Object} options - Additional options
  */
 export const handleProfessionalDragEnd = (event, options = {}) => {
-  const { setDraggedWidget } = options
+  const { setDraggedWidget, onDragEnd } = options
   
-  // Reset visual feedback
-  event.target.style.opacity = '1'
+  // Clear global drag state
+  window.dragState.isDragging = false
+  window.dragState.draggedWidgetType = null
+  window.dragState.lastDragPosition = null
+  window.dragState.dragStartTime = null
+  window.isDragging = false // For compatibility
+  
+  // Use requestAnimationFrame for smooth reset
+  requestAnimationFrame(() => {
+    const element = event.target
+    element.style.transition = `all ${ANIMATION_CONFIG.duration}ms ${ANIMATION_CONFIG.easing}`
+    element.style.opacity = '1'
+    element.style.transform = 'scale(1) rotate(0deg) translateZ(0)'
+    element.style.zIndex = 'auto'
+    element.style.boxShadow = ''
+    element.style.willChange = 'auto'
+    
+    // Remove drag class
+    element.classList.remove('dragging')
+  })
   
   // Clear state
   if (setDraggedWidget) {
@@ -263,11 +480,78 @@ export const handleProfessionalDragEnd = (event, options = {}) => {
   // Clear global variable
   window.draggedWidgetType = null
   
-  console.log('Professional drag end')
+  // Call custom drag end handler
+  if (onDragEnd) {
+    onDragEnd(event)
+  }
+  
+  console.log('Optimized drag end')
 }
 
 /**
- * Create enhanced drop zone with visual feedback
+ * Enhanced drag over handler with real-time collision detection
+ * @param {Object} event - Drag over event
+ * @param {Array} existingWidgets - Current widgets
+ * @param {Object} options - Additional options
+ */
+export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => {
+  const { onDragOver, onCollisionDetected, gridConfig = {} } = options
+  
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+  
+  // Get widget type and size
+  const widgetType = event.dataTransfer.getData('text/plain') || window.draggedWidgetType
+  if (!widgetType) return
+  
+  const widgetSize = getWidgetSize(widgetType)
+  
+  // Calculate drop position
+  const rect = event.currentTarget.getBoundingClientRect()
+  const dropData = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  }
+  
+  // Convert to grid coordinates
+  const { cols = 12, rowHeight = 80, margin = [16, 16] } = gridConfig
+  const gridX = Math.floor(dropData.x / (rowHeight + margin[0]))
+  const gridY = Math.floor(dropData.y / (rowHeight + margin[1]))
+  
+  // Clamp to grid bounds
+  const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
+  const clampedY = Math.max(0, gridY)
+  
+  // Check for collisions
+  const collidingWidgets = existingWidgets.filter(widget => {
+    const widgetRight = widget.x + widget.w
+    const widgetBottom = widget.y + widget.h
+    const newRight = clampedX + widgetSize.w
+    const newBottom = clampedY + widgetSize.h
+    
+    return !(
+      clampedX >= widgetRight ||
+      newRight <= widget.x ||
+      clampedY >= widgetBottom ||
+      newBottom <= widget.y
+    )
+  })
+  
+  // Provide visual feedback for collisions
+  if (collidingWidgets.length > 0 && onCollisionDetected) {
+    onCollisionDetected(collidingWidgets, { x: clampedX, y: clampedY })
+  }
+  
+  // Call original drag over handler
+  if (onDragOver) {
+    onDragOver(event, { position: { x: clampedX, y: clampedY }, collidingWidgets })
+  }
+}
+
+/**
+ * Create enhanced drop zone with visual feedback and collision detection
  * @param {Object} options - Drop zone options
  * @returns {Object} - Drop zone configuration
  */
@@ -276,6 +560,7 @@ export const createDropZone = (options = {}) => {
     onDrop,
     onDragOver,
     onDragLeave,
+    onCollisionDetected,
     existingWidgets = [],
     gridConfig = {}
   } = options
@@ -285,9 +570,11 @@ export const createDropZone = (options = {}) => {
       handleProfessionalDrop(event, existingWidgets, onDrop, gridConfig)
     },
     onDragOver: (event) => {
-      event.preventDefault()
-      event.dataTransfer.dropEffect = 'copy'
-      if (onDragOver) onDragOver(event)
+      handleEnhancedDragOver(event, existingWidgets, {
+        onDragOver,
+        onCollisionDetected,
+        gridConfig
+      })
     },
     onDragLeave: (event) => {
       if (onDragLeave) onDragLeave(event)

@@ -1,5 +1,7 @@
-@import 'react-grid-layout/css/styles.css';
-@import 'react-resizable/css/styles.css';
+/* Import professional grid styles */
+@import './components/grid/ProfessionalGrid.css';
+@import './components/grid/ProfessionalWidgetPalette.css';
+@import './components/grid/ProfessionalGridManager.css';
 
 @tailwind base;
 @tailwind components;
@@ -28,6 +30,9 @@
   .react-grid-item {
     transition: all 200ms ease;
     transition-property: left, top;
+    overflow: visible;
+    border-radius: 8px;
+    box-sizing: border-box;
   }
   
   .react-grid-item.cssTransforms {
@@ -54,10 +59,6 @@
     opacity: 0.2;
     transition-duration: 100ms;
     z-index: 2;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
     user-select: none;
   }
   
@@ -71,53 +72,16 @@
     visibility: hidden;
   }
   
-  .react-grid-item.react-grid-placeholder {
-    background: #3b82f6;
-    opacity: 0.2;
-    transition-duration: 100ms;
-    z-index: 2;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
-  }
-  
-  .react-grid-item > .react-resizable-handle::after {
-    content: '';
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    width: 5px;
-    height: 5px;
-    border-right: 2px solid rgba(0, 0, 0, 0.4);
-    border-bottom: 2px solid rgba(0, 0, 0, 0.4);
-  }
-  
-  /* Grid item container styles */
-  .react-grid-item {
-    overflow: hidden;
-    border-radius: 8px;
-    box-sizing: border-box;
-  }
-  
-  .react-grid-item .grid-item {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    box-sizing: border-box;
-  }
-  
   .react-grid-item.selected {
     box-shadow: 0 0 0 2px #3b82f6;
     z-index: 10;
   }
   
-  /* Ensure widget content is contained */
+  /* Widget content containment */
   .react-grid-item > div {
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     position: relative;
   }
@@ -128,119 +92,9 @@
     width: 100%;
     min-height: 100%;
     height: auto;
-    /* Allow dynamic height expansion for bottom placement */
     max-height: none;
   }
   
-  /* Widget content containment */
-  .grid-item {
-    position: relative;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .grid-item > * {
-    max-width: 100%;
-    max-height: 100%;
-    overflow: hidden;
-  }
-
-  /* Enhanced widget display */
-  .enhanced-grid-layout {
-    height: 100%;
-    width: 100%;
-    overflow: auto;
-  }
-
-  .enhanced-grid-layout .react-grid-layout {
-    min-height: 100% !important;
-    height: auto !important;
-    width: 100% !important;
-  }
-
-  /* Standard Responsive Breakpoints */
-  
-  /* 6. Ultra-Wide Screens (TVs, Big Monitors) - 1441px and above */
-  @media (min-width: 1441px) {
-    .react-grid-item {
-      min-height: 200px;
-    }
-    
-    .enhanced-grid-layout {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-  }
-
-  /* 5. Extra Large Devices (Desktops/Monitors) - 1201px – 1440px */
-  @media (max-width: 1440px) and (min-width: 1201px) {
-    .react-grid-item {
-      min-height: 180px;
-    }
-  }
-
-  /* 4. Large Devices (Laptops/Small Desktops) - 1025px – 1200px */
-  @media (max-width: 1200px) and (min-width: 1025px) {
-    .react-grid-item {
-      min-height: 160px;
-    }
-  }
-
-  /* 3. Medium Devices (Tablets) - 769px – 1024px */
-  @media (max-width: 1024px) and (min-width: 769px) {
-    .react-grid-item {
-      min-height: 140px;
-    }
-    
-    .grid-manager .enhanced-grid-layout {
-      height: calc(100vh - 140px);
-    }
-  }
-
-  /* 2. Small Devices (Mobiles – Large) - 481px – 768px */
-  @media (max-width: 768px) and (min-width: 481px) {
-    .react-grid-item {
-      min-height: 120px;
-    }
-    
-    .grid-manager .enhanced-grid-layout {
-      height: calc(100vh - 120px);
-    }
-    
-    .widget-header {
-      padding: 6px 8px;
-    }
-    
-    .widget-body {
-      padding: 6px;
-    }
-  }
-
-  /* 1. Extra Small Devices (Mobiles) - 0px – 480px */
-  @media (max-width: 480px) {
-    .react-grid-item {
-      min-height: 100px;
-    }
-    
-    .grid-manager .enhanced-grid-layout {
-      height: calc(100vh - 100px);
-    }
-    
-    .widget-header {
-      padding: 4px 6px;
-    }
-    
-    .widget-body {
-      padding: 4px;
-    }
-    
-    .chart-container,
-    .map-container {
-      min-height: 80px;
-    }
-  }
-
   /* Widget content responsive adjustments */
   .widget-content {
     display: flex;
@@ -257,7 +111,7 @@
 
   .widget-body {
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
     padding: 8px;
   }
 
@@ -289,33 +143,6 @@
     flex-direction: column;
     justify-content: center;
     height: 100%;
-  }
-
-  /* Ensure proper spacing for all widgets */
-  .react-grid-layout .react-grid-item {
-    margin-bottom: 16px;
-  }
-
-  /* Add extra bottom margin to the last row of widgets */
-  .react-grid-layout .react-grid-item:last-child {
-    margin-bottom: 32px;
-  }
-
-  /* Ensure grid container has proper height calculation */
-  .grid-manager .enhanced-grid-layout {
-    height: calc(100vh - 160px);
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  /* Smooth scrolling for better UX */
-  .enhanced-grid-layout {
-    scroll-behavior: smooth;
-  }
-
-  /* Ensure widgets are fully visible when scrolled */
-  .react-grid-layout {
-    padding-bottom: 50px;
   }
 
   /* Chatbot UI Enhancements */
@@ -358,194 +185,7 @@
     background: #a8a8a8;
   }
 
-  /* Dashboard view specific styles */
-  .dashboard-view {
-    height: auto !important;
-    min-height: 100%;
-    overflow: visible;
-    /* Allow dynamic height expansion */
-    max-height: none;
-  }
-
-  .dashboard-view .react-grid-layout {
-    height: auto !important;
-    min-height: 100%;
-    overflow: visible;
-    /* Allow dynamic height expansion for bottom placement */
-    max-height: none;
-  }
-
-  .dashboard-view .enhanced-grid-layout {
-    height: auto !important;
-    min-height: 100%;
-    overflow: visible;
-    /* Allow dynamic height expansion */
-    max-height: none;
-  }
-
-  /* Ensure dashboard widgets are properly spaced */
-  .dashboard-view .react-grid-item {
-    margin-bottom: 16px;
-  }
-
-  /* Dashboard container should allow scrolling */
-  .dashboard-view .react-grid-layout {
-    padding-bottom: 32px;
-  }
-
-  /* Basic homepage container styles */
-  .homepage-container {
-    overflow-x: hidden;
-    width: 100%;
-  }
-
-  /* Fix navbar and footer movement during scrolling/swiping */
-  nav {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 50 !important;
-    transform: translateZ(0) !important;
-    backface-visibility: hidden !important;
-    -webkit-backface-visibility: hidden !important;
-    will-change: auto !important;
-    -webkit-transform: translateZ(0) !important;
-  }
-
-  /* Prevent any movement on navbar elements */
-  nav * {
-    transform: translateZ(0) !important;
-    backface-visibility: hidden !important;
-    -webkit-backface-visibility: hidden !important;
-  }
-
-  /* Fix footer positioning */
-  footer {
-    position: relative !important;
-    transform: translateZ(0) !important;
-    backface-visibility: hidden !important;
-    -webkit-backface-visibility: hidden !important;
-    -webkit-transform: translateZ(0) !important;
-  }
-
-  /* Prevent elastic scrolling and momentum on mobile */
-  body {
-    overscroll-behavior: none !important;
-    -webkit-overflow-scrolling: auto !important;
-    touch-action: pan-y !important;
-  }
-
-  /* Prevent scroll momentum on all elements */
-  * {
-    overscroll-behavior: none !important;
-  }
-
-  /* Lock viewport to prevent movement */
-  html, body {
-    position: fixed !important;
-    width: 100% !important;
-    height: 100% !important;
-    overflow: hidden !important;
-  }
-
-  /* Allow scrolling only in main content area */
-  .main-content {
-    position: fixed !important;
-    top: 4rem !important; /* Height of navbar */
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior: none !important;
-    padding-top: 0 !important; /* Remove any top padding */
-  }
-
-  /* Mobile-specific fixes */
-  @media (max-width: 768px) {
-    /* Prevent navbar movement on mobile */
-    nav {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      z-index: 50 !important;
-      transform: translate3d(0, 0, 0) !important;
-      -webkit-transform: translate3d(0, 0, 0) !important;
-      backface-visibility: hidden !important;
-      -webkit-backface-visibility: hidden !important;
-      will-change: auto !important;
-    }
-
-    /* Lock body on mobile to prevent movement */
-    body {
-      position: fixed !important;
-      width: 100% !important;
-      height: 100% !important;
-      overflow: hidden !important;
-      overscroll-behavior: none !important;
-      -webkit-overflow-scrolling: auto !important;
-      touch-action: pan-y !important;
-    }
-
-    /* Main content scrolling area */
-    .main-content {
-      position: fixed !important;
-      top: 4rem !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      -webkit-overflow-scrolling: touch !important;
-      overscroll-behavior: none !important;
-      touch-action: pan-y !important;
-    }
-
-    /* Prevent footer movement */
-    footer {
-      position: relative !important;
-      transform: translate3d(0, 0, 0) !important;
-      -webkit-transform: translate3d(0, 0, 0) !important;
-      backface-visibility: hidden !important;
-      -webkit-backface-visibility: hidden !important;
-    }
-
-    /* Mobile-specific improvements */
-    .container {
-      padding-left: 1rem !important;
-      padding-right: 1rem !important;
-    }
-
-    /* Ensure modals are mobile-friendly */
-    .modal {
-      margin: 1rem !important;
-      max-width: calc(100vw - 2rem) !important;
-    }
-
-    /* Improve button touch targets on mobile */
-    button {
-      min-height: 44px !important;
-      min-width: 44px !important;
-    }
-
-    /* Better text sizing for mobile */
-    h1 { font-size: 1.875rem !important; }
-    h2 { font-size: 1.5rem !important; }
-    h3 { font-size: 1.25rem !important; }
-    
-    /* Improve form inputs on mobile */
-    input, textarea, select {
-      font-size: 16px !important; /* Prevents zoom on iOS */
-      min-height: 44px !important;
-    }
-  }
-
-  /* Navigation Styles - Modern and Responsive */
-  
-  /* Ensure navbar stays fixed and doesn't interfere with content */
+  /* Navigation Styles */
   nav {
     position: fixed !important;
     top: 0 !important;
@@ -556,9 +196,36 @@
     -webkit-backdrop-filter: blur(8px) !important;
   }
   
-  /* Ensure main content has proper top padding */
+  /* Ensure main content has proper top padding and fills viewport */
   .main-content {
     padding-top: 4rem; /* 64px - height of navbar */
+    min-height: calc(100vh - 4rem);
+    background-color: #f9fafb; /* bg-gray-50 */
+  }
+  
+  /* Fix for white space during scrolling */
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Ensure pages fill the available space */
+  .page-content {
+    flex: 1;
+    min-height: calc(100vh - 4rem);
+  }
+  
+  /* Fix footer spacing */
+  footer {
+    margin-top: auto;
   }
   
   /* Smooth transitions for all interactive elements */
@@ -577,225 +244,62 @@
       display: none !important;
     }
   }
-  
-  /* Better mobile menu animations */
-  .mobile-menu-enter {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  
-  .mobile-menu-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-  }
-  
-  .mobile-menu-exit {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  
-  .mobile-menu-exit-active {
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.2s ease-in, transform 0.2s ease-in;
-  }
 
   /* Responsive Layout Styles */
-  
-  /* Ultra-Wide Screens */
   @media (min-width: 1441px) {
-    .main-container {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    
-    .section-padding {
-      padding: 6rem 0;
-    }
-    
-    .content-max-width {
-      max-width: 1200px;
+    .react-grid-item {
+      min-height: 200px;
     }
   }
 
-  /* Extra Large Devices */
   @media (max-width: 1440px) and (min-width: 1201px) {
-    .section-padding {
-      padding: 5rem 0;
-    }
-    
-    .content-max-width {
-      max-width: 1100px;
+    .react-grid-item {
+      min-height: 180px;
     }
   }
 
-  /* Large Devices */
   @media (max-width: 1200px) and (min-width: 1025px) {
-    .section-padding {
-      padding: 4rem 0;
-    }
-    
-    .content-max-width {
-      max-width: 1000px;
+    .react-grid-item {
+      min-height: 160px;
     }
   }
 
-  /* Medium Devices (Tablets) */
   @media (max-width: 1024px) and (min-width: 769px) {
-    .section-padding {
-      padding: 3rem 0;
-    }
-    
-    .content-max-width {
-      max-width: 90%;
-    }
-    
-    .grid-cols-responsive {
-      grid-template-columns: repeat(2, 1fr);
+    .react-grid-item {
+      min-height: 140px;
     }
   }
 
-  /* Small Devices (Mobiles – Large) */
   @media (max-width: 768px) and (min-width: 481px) {
-    .section-padding {
-      padding: 2.5rem 0;
+    .react-grid-item {
+      min-height: 120px;
     }
     
-    .content-max-width {
-      max-width: 95%;
+    .widget-header {
+      padding: 6px 8px;
     }
     
-    .grid-cols-responsive {
-      grid-template-columns: 1fr;
-    }
-    
-    .hero-title {
-      font-size: 2.5rem;
-    }
-    
-    .hero-subtitle {
-      font-size: 1.125rem;
+    .widget-body {
+      padding: 6px;
     }
   }
 
-  /* Extra Small Devices (Mobiles) */
   @media (max-width: 480px) {
-    .section-padding {
-      padding: 2rem 0;
+    .react-grid-item {
+      min-height: 100px;
     }
     
-    .content-max-width {
-      max-width: 95%;
+    .widget-header {
+      padding: 4px 6px;
     }
     
-    .grid-cols-responsive {
-      grid-template-columns: 1fr;
+    .widget-body {
+      padding: 4px;
     }
     
-    .hero-title {
-      font-size: 2rem;
-    }
-    
-    .hero-subtitle {
-      font-size: 1rem;
-    }
-    
-    .button-responsive {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-
-  /* Responsive Typography */
-  
-  /* Ultra-Wide Screens */
-  @media (min-width: 1441px) {
-    .text-responsive-xl {
-      font-size: 3.5rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 2.5rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 1.5rem;
-    }
-  }
-
-  /* Extra Large Devices */
-  @media (max-width: 1440px) and (min-width: 1201px) {
-    .text-responsive-xl {
-      font-size: 3rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 2.25rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 1.375rem;
-    }
-  }
-
-  /* Large Devices */
-  @media (max-width: 1200px) and (min-width: 1025px) {
-    .text-responsive-xl {
-      font-size: 2.75rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 2rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 1.25rem;
-    }
-  }
-
-  /* Medium Devices (Tablets) */
-  @media (max-width: 1024px) and (min-width: 769px) {
-    .text-responsive-xl {
-      font-size: 2.5rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 1.875rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 1.125rem;
-    }
-  }
-
-  /* Small Devices (Mobiles – Large) */
-  @media (max-width: 768px) and (min-width: 481px) {
-    .text-responsive-xl {
-      font-size: 2.25rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 1.75rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 1rem;
-    }
-  }
-
-  /* Extra Small Devices (Mobiles) */
-  @media (max-width: 480px) {
-    .text-responsive-xl {
-      font-size: 1.875rem;
-    }
-    
-    .text-responsive-lg {
-      font-size: 1.5rem;
-    }
-    
-    .text-responsive-md {
-      font-size: 0.875rem;
+    .chart-container,
+    .map-container {
+      min-height: 80px;
     }
   }
 
@@ -848,19 +352,19 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  /* Widget drag cursor - only when not hovering over buttons */
+  /* Widget drag cursor */
   .react-grid-item:not(.react-draggable-dragging) {
     cursor: move;
   }
 
-  /* Ensure control buttons are always clickable and override cursor */
+  /* Ensure control buttons are always clickable */
   .react-grid-item button {
     cursor: pointer !important;
     pointer-events: auto !important;
     z-index: 10;
   }
 
-  /* Control button container should be above drag area */
+  /* Control button container */
   .react-grid-item .absolute {
     z-index: 10;
     pointer-events: none;
@@ -870,12 +374,7 @@
     pointer-events: auto;
   }
 
-  /* When hovering over buttons, don't show move cursor */
-  .react-grid-item:hover .absolute:hover {
-    cursor: default;
-  }
-
-  /* Empty dashboard state improvements */
+  /* Empty dashboard state */
   .enhanced-grid-layout .empty-dashboard-state {
     z-index: 20;
     pointer-events: none;
@@ -888,9 +387,51 @@
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 
-  /* Ensure grid background doesn't interfere with empty state */
-  .enhanced-grid-layout .grid-background {
-    z-index: 0;
-    opacity: 0.05;
+  /* Performance optimizations */
+  .react-grid-layout {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    contain: layout style paint;
+  }
+
+  .react-grid-item {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    contain: layout style paint;
+    isolation: isolate;
+  }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 768px) {
+    .react-grid-item.dragging {
+      transform: scale(1.02) rotate(1deg);
+    }
+
+    .react-grid-item:hover:not(.react-draggable-dragging) {
+      transform: translateY(-1px);
+    }
+
+    .drop-indicator {
+      border-width: 1px;
+    }
+
+    /* Improve button touch targets on mobile */
+    button {
+      min-height: 44px !important;
+      min-width: 44px !important;
+    }
+
+    /* Better text sizing for mobile */
+    h1 { font-size: 1.875rem !important; }
+    h2 { font-size: 1.5rem !important; }
+    h3 { font-size: 1.25rem !important; }
+    
+    /* Improve form inputs on mobile */
+    input, textarea, select {
+      font-size: 16px !important; /* Prevents zoom on iOS */
+      min-height: 44px !important;
+    }
   }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { useAutoValue } from '../../hooks/useAutoValue'
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -65,41 +66,24 @@ const MapUpdater = ({ devices }) => {
 
 export const MapWidget = ({ 
   widgetId,
-  mqttTopic,
   title = 'Device Map',
   center = [37.7749, -122.4194], // San Francisco default
   zoom = 10,
-  size = 'medium'
+  size = 'medium',
+  mqttTopic = null,
+  panelId = 'default',
+  autoGenerate = true
 }) => {
-  const [devices, setDevices] = useState([
-    {
-      id: 'device-1',
-      name: 'Temperature Sensor A1',
-      type: 'sensor',
-      status: 'online',
-      lat: 37.7749,
-      lng: -122.4194,
-      data: { temperature: 24.5, humidity: 65 }
-    },
-    {
-      id: 'device-2',
-      name: 'Security Camera B2',
-      type: 'camera',
-      status: 'online',
-      lat: 37.7849,
-      lng: -122.4094,
-      data: { recording: true, motion: false }
-    },
-    {
-      id: 'device-3',
-      name: 'Smart Actuator C3',
-      type: 'actuator',
-      status: 'warning',
-      lat: 37.7649,
-      lng: -122.4294,
-      data: { power: 85, connected: true }
-    }
-  ])
+  const { value: devices, connected, deviceInfo } = useAutoValue(
+    widgetId, 
+    'map', 
+    { center, zoom }, 
+    panelId, 
+    autoGenerate
+  )
+
+  // Ensure devices is always an array
+  const safeDevices = Array.isArray(devices) ? devices : []
 
   // Size configurations
   const sizeConfig = {
@@ -109,6 +93,7 @@ export const MapWidget = ({
   }
 
   const { width, height } = sizeConfig[size] || sizeConfig.medium
+
 
   // Subscribe to MQTT topic for device updates
   useEffect(() => {
@@ -132,7 +117,6 @@ export const MapWidget = ({
         )
       }
     }
-
 
     return () => {
     }
@@ -161,9 +145,9 @@ export const MapWidget = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           
-          <MapUpdater devices={devices} />
+          <MapUpdater devices={safeDevices} />
           
-          {devices.map((device) => (
+          {safeDevices.map((device) => (
             <Marker
               key={device.id}
               position={[device.lat, device.lng]}
@@ -214,7 +198,7 @@ export const MapWidget = ({
       
       <div className="mt-4 flex justify-between items-center">
         <div className="text-sm text-gray-600">
-          Devices: {devices.length}
+          Devices: {safeDevices.length}
         </div>
         <div className="flex space-x-2">
           <div className="flex items-center space-x-1">

@@ -15,6 +15,7 @@ import ChatBot from './components/ChatBot'
 import { useNavigation } from './hooks/useNavigation'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
+import mqttService from './services/mqttService'
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -75,19 +76,21 @@ function AppContent() {
     })
   }, [location.pathname])
 
-  // Initialize MQTT connection (disabled for now - using random data only)
+  // Initialize MQTT connection
   useEffect(() => {
     if (isAuthenticated && user) {
-      // For now, just set status as connected for UI display
-      setMqttStatus('connected')
-      
-      // TODO: Enable MQTT connection in future
-      // mqttService.connect().catch(() => {
-      //   console.log('Real MQTT broker not available, using simulation')
-      //   mqttService.simulateConnection()
-      // })
+      // Try to connect to MQTT broker
+      mqttService.connect().then(() => {
+        setMqttStatus('connected')
+        console.log('✅ MQTT connected successfully')
+      }).catch((error) => {
+        console.log('⚠️ MQTT broker not available, using simulation:', error.message)
+        mqttService.simulateConnection()
+        setMqttStatus('simulated')
+      })
     } else {
       setMqttStatus('disconnected')
+      mqttService.disconnect()
     }
   }, [isAuthenticated, user])
 
@@ -95,8 +98,8 @@ function AppContent() {
   const handleLogout = () => {
     logout()
     setMqttStatus('disconnected')
+    mqttService.disconnect()
     showSuccess('Logged out successfully')
-    // mqttService.disconnect() // TODO: Enable when MQTT is active
   }
 
 
@@ -145,7 +148,7 @@ function AppContent() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Global Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -192,7 +195,7 @@ function AppContent() {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="group flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-purple-600 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <span className="hidden sm:block text-sm font-medium">{user?.name || 'User'}</span>
@@ -266,7 +269,7 @@ function AppContent() {
       </nav>
 
       {/* Main Content */}
-      <div className="main-content">
+      <div className="main-content flex-1">
         <ErrorBoundary>
           <Suspense fallback={<LoadingSpinner fullScreen text="Loading page..." />}>
           <Routes>

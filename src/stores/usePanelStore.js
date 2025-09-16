@@ -82,8 +82,8 @@ export const usePanelStore = createWithEqualityFn(
           id: Date.now().toString(),
           type: widget.type,
           config: widget.config || {},
-          mqttTopic: widget.mqttTopic || '',
           deviceId: widget.deviceId || '',
+          mqttTopic: widget.mqttTopic || '',
           position: widget.position || { x: 0, y: 0, w: 3, h: 3 },
           ...widget
         }

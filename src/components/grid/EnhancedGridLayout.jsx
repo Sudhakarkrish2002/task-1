@@ -6,7 +6,11 @@ import {
   handleProfessionalDrop, 
   createDropZone, 
   createDropIndicator,
-  getWidgetSize 
+  getWidgetSize,
+  handleSmartCollision,
+  animateWidgetMovement,
+  batchAnimateWidgets,
+  handleEnhancedDragOver
 } from '../../lib/dragDropUtils'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
@@ -51,6 +55,8 @@ export const EnhancedGridLayout = ({
   const [isDragOver, setIsDragOver] = useState(false)
   const [dropIndicator, setDropIndicator] = useState(null)
   const [dragPosition, setDragPosition] = useState(null)
+  const [collidingWidgets, setCollidingWidgets] = useState([])
+  const [isAnimating, setIsAnimating] = useState(false)
   const gridRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -107,24 +113,88 @@ export const EnhancedGridLayout = ({
     gridUtilization: widgets.length > 0 ? (widgets.reduce((acc, w) => acc + (w.w * w.h), 0) / (12 * 200)) * 100 : 0
   }
 
-  // Professional drop handler with enhanced positioning
+  // Professional drop handler with smart collision handling
   const handleDrop = useCallback((event) => {
     console.log('Professional drop event triggered:', event)
     
-    // Use professional drop handling
-    handleProfessionalDrop(event, widgets, onWidgetAdd, {
-      cols: 12,
-      rowHeight: 80,
-      margin: [16, 16]
-    })
+    // Get widget type and calculate position
+    const widgetType = event.dataTransfer.getData('text/plain') || window.draggedWidgetType
+    if (!widgetType || !onWidgetAdd) return
+    
+    const widgetSize = getWidgetSize(widgetType)
+    const rect = event.currentTarget.getBoundingClientRect()
+    const dropData = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    }
+    
+    // Convert to grid coordinates
+    // rowHeight = 80, margin = [16, 16], so total cell size = 96
+    const cellSize = 96 // 80 + 16
+    const gridX = Math.floor(dropData.x / cellSize)
+    const gridY = Math.floor(dropData.y / cellSize)
+    const dropPosition = {
+      x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
+      y: Math.max(0, gridY)
+    }
+    
+    // Handle smart collision if there are colliding widgets
+    if (collidingWidgets.length > 0) {
+      setIsAnimating(true)
+      
+      // Prepare batch animations for better performance
+      const animations = collidingWidgets.map((widget, index) => {
+        const element = document.querySelector(`[data-grid="${widget.i}"]`)
+        if (element) {
+          // Calculate new position (push right or down)
+          const newPosition = {
+            x: Math.min(widget.x + widgetSize.w, 12 - widget.w),
+            y: widget.y
+          }
+          
+          // If pushing right would go out of bounds, push down instead
+          if (newPosition.x + widget.w > 12) {
+            newPosition.x = widget.x
+            newPosition.y = widget.y + widgetSize.h + 1
+          }
+          
+          return {
+            element,
+            fromPosition: { x: widget.x * 96, y: widget.y * 96 },
+            toPosition: { x: newPosition.x * 96, y: newPosition.y * 96 }
+          }
+        }
+        return null
+      }).filter(Boolean)
+      
+      // Execute batch animations
+      batchAnimateWidgets(animations, () => {
+        setIsAnimating(false)
+      })
+    }
+    
+    // Add the new widget
+    onWidgetAdd(widgetType, { position: dropPosition })
     
     // Clear visual feedback
     setIsDragOver(false)
     setDropIndicator(null)
     setDragPosition(null)
-  }, [widgets, onWidgetAdd])
+    setCollidingWidgets([])
+    
+    // Reset all widget visual feedback
+    widgets.forEach(widget => {
+      const element = document.querySelector(`[data-grid="${widget.i}"]`)
+      if (element) {
+        element.style.transition = 'all 200ms ease'
+        element.style.transform = 'scale(1)'
+        element.style.opacity = '1'
+        element.style.border = ''
+      }
+    })
+  }, [widgets, onWidgetAdd, collidingWidgets])
 
-  // Enhanced drag over handler with position tracking
+  // Optimized drag over handler with throttling and performance improvements
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
     if (e.dataTransfer) {
@@ -133,45 +203,129 @@ export const EnhancedGridLayout = ({
     
     setIsDragOver(true)
     
-    // Calculate drop position for visual feedback
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    setDragPosition({ x, y })
-    
-    // Create drop indicator if we have a widget type
-    const widgetType = window.draggedWidgetType
-    if (widgetType) {
-      const widgetSize = getWidgetSize(widgetType)
-      const gridX = Math.floor(x / 96) // 80 + 16 margin
-      const gridY = Math.floor(y / 96)
-      
-      setDropIndicator({
-        x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
-        y: Math.max(0, gridY),
-        w: widgetSize.w,
-        h: widgetSize.h
-      })
+    // Throttle the expensive operations
+    if (window.dragOverThrottle) {
+      clearTimeout(window.dragOverThrottle)
     }
-  }, [])
+    
+    window.dragOverThrottle = setTimeout(() => {
+      // Calculate drop position for visual feedback
+      if (!e.currentTarget) return
+      
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      
+      setDragPosition({ x, y })
+      
+      // Create drop indicator if we have a widget type
+      const widgetType = window.draggedWidgetType
+      if (widgetType) {
+        const widgetSize = getWidgetSize(widgetType)
+        const cellSize = 96 // 80 + 16 margin
+        const gridX = Math.floor(x / cellSize)
+        const gridY = Math.floor(y / cellSize)
+        
+        const dropPosition = {
+          x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
+          y: Math.max(0, gridY),
+          w: widgetSize.w,
+          h: widgetSize.h
+        }
+        
+        setDropIndicator(dropPosition)
+        
+        // Optimized collision detection - only check if position changed significantly
+        const currentCollidingWidgets = widgets.filter(widget => {
+          const widgetRight = widget.x + widget.w
+          const widgetBottom = widget.y + widget.h
+          const newRight = dropPosition.x + widgetSize.w
+          const newBottom = dropPosition.y + widgetSize.h
+          
+          // Check for overlap - widgets overlap if they intersect in both x and y axes
+          const overlapX = !(newRight <= widget.x || widgetRight <= dropPosition.x)
+          const overlapY = !(newBottom <= widget.y || widgetBottom <= dropPosition.y)
+          
+          return overlapX && overlapY
+        })
+        
+        // Only update if collision state changed
+        if (JSON.stringify(currentCollidingWidgets.map(w => w.i)) !== JSON.stringify(collidingWidgets.map(w => w.i))) {
+          setCollidingWidgets(currentCollidingWidgets)
+          
+          // Batch DOM updates for better performance
+          const elementsToUpdate = new Map()
+          
+          // Collect all elements that need updates
+          currentCollidingWidgets.forEach(widget => {
+            const element = document.querySelector(`[data-grid="${widget.i}"]`)
+            if (element) {
+              elementsToUpdate.set(element, { type: 'collision', widget })
+            }
+          })
+          
+          widgets.filter(w => !currentCollidingWidgets.includes(w)).forEach(widget => {
+            const element = document.querySelector(`[data-grid="${widget.i}"]`)
+            if (element && !element.classList.contains('dragging')) {
+              elementsToUpdate.set(element, { type: 'reset', widget })
+            }
+          })
+          
+          // Apply all updates in a single batch
+          elementsToUpdate.forEach((update, element) => {
+            if (update.type === 'collision') {
+              element.style.transition = 'all 150ms ease'
+              element.style.transform = 'scale(0.95)'
+              element.style.opacity = '0.8'
+              element.style.border = '2px dashed #ef4444'
+            } else {
+              element.style.transition = 'all 150ms ease'
+              element.style.transform = 'scale(1)'
+              element.style.opacity = '1'
+              element.style.border = ''
+            }
+          })
+        }
+      }
+    }, 16) // ~60fps throttling
+  }, [widgets, collidingWidgets])
 
   const handleDragLeave = useCallback((e) => {
     if (!containerRef.current?.contains(e.relatedTarget)) {
       setIsDragOver(false)
       setDropIndicator(null)
       setDragPosition(null)
+      setCollidingWidgets([])
+      
+      // Reset all widget visual feedback
+      widgets.forEach(widget => {
+        const element = document.querySelector(`[data-grid="${widget.i}"]`)
+        if (element && !element.classList.contains('dragging')) {
+          element.style.transition = 'all 200ms ease'
+          element.style.transform = 'scale(1)'
+          element.style.opacity = '1'
+          element.style.border = ''
+        }
+      })
     }
-  }, [])
-
-  // Grid layout props
-  const gridProps = {
-    ...getGridLayoutProps(isPreviewMode),
-    ...props
-  }
+  }, [widgets])
 
   // Determine if this is a dashboard view
   const isDashboardView = className.includes('dashboard-view')
+
+  // Grid layout props with enhanced overlap prevention
+  const gridProps = {
+    ...getGridLayoutProps(isPreviewMode),
+    ...props,
+    // Enhanced overlap prevention for dashboard view
+    preventCollision: true,
+    compactType: 'vertical',
+    allowOverlap: false,
+    isBounded: isDashboardView ? false : true, // Allow unbounded growth in dashboard view
+    autoSize: isDashboardView ? false : true, // Disable autoSize in dashboard view for better control
+    useCSSTransforms: true,
+    transformScale: 1
+  }
   
   return (
     <div 
@@ -201,8 +355,8 @@ export const EnhancedGridLayout = ({
               )}
               
               {isValidating && (
-                <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-600 rounded-lg">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                   <span className="text-xs sm:text-sm font-medium">Validating</span>
                 </div>
               )}
@@ -261,11 +415,13 @@ export const EnhancedGridLayout = ({
       {/* Grid Container */}
       <div 
         ref={containerRef}
-        className={`relative flex-1 ${isDashboardView ? 'overflow-auto' : 'overflow-auto'}`}
+        className={`relative flex-1 ${isDashboardView ? 'overflow-visible' : 'overflow-auto'}`}
         style={{ 
-          minHeight: isDashboardView ? '400px' : '400px', 
-          height: isDashboardView ? '100%' : '100%',
-          maxHeight: isDashboardView ? 'calc(100vh - 200px)' : '100%'
+          minHeight: isDashboardView ? '600px' : '400px', 
+          height: isDashboardView ? 'auto' : '100%',
+          maxHeight: isDashboardView ? 'none' : '100%',
+          width: '100%',
+          position: 'relative'
         }}
         onScroll={isDashboardView ? undefined : handleScroll}
         onDragOver={handleDragOver}
@@ -313,6 +469,43 @@ export const EnhancedGridLayout = ({
         )}
 
         {/* React Grid Layout */}
+        {(() => {
+          // Debug: Log widget sizes to identify problematic widgets
+          widgets.forEach(widget => {
+            if (widget.minW >= widget.w || widget.minH >= widget.h) {
+              console.error('🚨 INVALID WIDGET SIZING DETECTED:', {
+                id: widget.i,
+                type: widget.type,
+                w: widget.w,
+                h: widget.h,
+                minW: widget.minW,
+                minH: widget.minH,
+                maxW: widget.maxW,
+                maxH: widget.maxH
+              })
+            }
+          })
+          
+          // Debug: Log layout items to identify problematic layout items
+          Object.keys(layouts).forEach(breakpoint => {
+            layouts[breakpoint].forEach(item => {
+              if (item.minW >= item.w || item.minH >= item.h) {
+                console.error('🚨 INVALID LAYOUT ITEM SIZING DETECTED:', {
+                  breakpoint,
+                  id: item.i,
+                  w: item.w,
+                  h: item.h,
+                  minW: item.minW,
+                  minH: item.minH,
+                  maxW: item.maxW,
+                  maxH: item.maxH
+                })
+              }
+            })
+          })
+          
+          return null
+        })()}
         <ResponsiveGridLayout
           ref={gridRef}
           {...gridProps}
@@ -327,8 +520,8 @@ export const EnhancedGridLayout = ({
                 data-grid={widget}
                 className="grid-item group relative"
               >
-              <div className="w-full h-full overflow-hidden bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 relative">
-                <div className="absolute inset-0 overflow-hidden">
+              <div className="w-full h-full overflow-visible bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 relative">
+                <div className="absolute inset-0 overflow-visible">
                   {renderWidget ? renderWidget(widget) : (
                     <div className="w-full h-full bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center">
                       <div className="text-center">
@@ -356,7 +549,7 @@ export const EnhancedGridLayout = ({
                     <button
                       onClick={(e) => handleWidgetCopy(widget.i, e)}
                       onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 shadow-sm cursor-pointer"
+                      className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm cursor-pointer"
                       title="Copy widget"
                     >
                       <Copy className="w-3 h-3" />
@@ -394,7 +587,7 @@ export const EnhancedGridLayout = ({
         {showScrollButton && widgets.length > 0 && !isDashboardView && (
           <button
             onClick={scrollToBottom}
-            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 flex items-center space-x-1 sm:space-x-2"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-red-600 hover:bg-red-700 text-white p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 flex items-center space-x-1 sm:space-x-2"
             title="Scroll to bottom to see all widgets"
           >
             <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />

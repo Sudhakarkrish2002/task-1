@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Lock, Eye, Copy, Check } from 'lucide-react'
 import { EnhancedGridLayout } from './grid/EnhancedGridLayout'
 import { Button } from './ui/button'
+import { autoFixOverlaps } from '../lib/gridUtils'
 import { GaugeWidget } from './widgets/gauge-widget'
 import { ChartWidget } from './widgets/chart-widget'
 import { MapWidget } from './widgets/map-widget'
@@ -33,6 +34,10 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         const storedData = localStorage.getItem(`published-${panelId}`)
         if (storedData) {
           const data = JSON.parse(storedData)
+          console.log('🔍 SharedDashboardView - Loaded data:', data)
+          console.log('🔍 Widgets count:', data.widgets?.length || 0)
+          console.log('🔍 Layouts:', data.layouts)
+          console.log('🔍 Widgets data:', data.widgets)
           setDashboardData(data)
           setIsLoading(false)
           return
@@ -81,85 +86,84 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
 
   // Widget renderer function for shared view
   const renderWidget = useCallback((widget) => {
+    const commonProps = {
+      widgetId: widget.i || widget.id,
+      panelId: 'shared',
+      autoGenerate: true
+    }
+
     switch (widget.type) {
       case 'gauge':
         return (
           <GaugeWidget
-            value={widget.value || 50}
-            max={widget.max || 100}
-            min={widget.min || 0}
-            label={widget.title || 'Gauge'}
-            color={widget.color || 'primary'}
-            size="small"
+            {...commonProps}
+            title={widget.title || 'Gauge'}
+            min={widget.minValue || 0}
+            max={widget.maxValue || 100}
+            unit={widget.unit || '%'}
+            color={widget.color || '#ef4444'}
           />
         )
       case 'chart':
         return (
           <ChartWidget
-            widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
+            {...commonProps}
             title={widget.title || 'Chart'}
-            chartType={widget.chartType || 'line'}
-            color={widget.color || '#3b82f6'}
-            size="small"
+            chartType={widget.chartType || 'bar'}
+            color={widget.color || '#ef4444'}
           />
         )
       case 'map':
         return (
           <MapWidget
-            widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
+            {...commonProps}
             title={widget.title || 'Device Map'}
-            size="small"
+            center={widget.center || [37.7749, -122.4194]}
+            zoom={widget.zoom || 10}
           />
         )
       case 'notification':
         return (
           <NotificationWidget
-            widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
+            {...commonProps}
             title={widget.title || 'Notifications'}
-            size="small"
           />
         )
       case 'toggle':
         return (
           <ToggleWidget
-            name={widget.title || 'Toggle'}
-            status={widget.status || false}
-            location={widget.location || 'Device Location'}
+            {...commonProps}
+            title={widget.title || 'Toggle'}
           />
         )
       case 'sensor-tile':
         return (
           <SimpleSensorWidget
-            value={widget.value || '0'}
+            {...commonProps}
             title={widget.title || 'Sensor'}
-            unit={widget.unit || ''}
+            unit={widget.unit || '°C'}
+            min={widget.minValue || 0}
+            max={widget.maxValue || 100}
           />
         )
       case 'slider':
         return (
           <SliderWidget
-            widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
-            title={widget.title || 'Slider Control'}
-            value={widget.value || 50}
-            min={widget.min || 0}
-            max={widget.max || 100}
-            color={widget.color || '#3b82f6'}
-            size="small"
+            {...commonProps}
+            title={widget.title || 'Slider'}
+            min={widget.minValue || 0}
+            max={widget.maxValue || 100}
+            unit={widget.unit || ''}
+            color={widget.color || '#ef4444'}
           />
         )
       case '3d-model':
         return (
           <Model3DWidget
-            widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
+            {...commonProps}
             title={widget.title || '3D Model'}
             modelType={widget.modelType || 'cube'}
             color={widget.color || '#3b82f6'}
-            size="small"
           />
         )
       default:
@@ -176,7 +180,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -206,7 +210,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
           <div className="text-center mb-6">
-            <Lock className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+            <Lock className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Shared Dashboard
             </h2>
@@ -238,7 +242,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-red-600 hover:bg-red-700"
             >
               Access Dashboard
             </Button>
@@ -249,7 +253,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
               <span>Dashboard: {dashboardData?.title}</span>
               <button
                 onClick={copyLink}
-                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
+                className="flex items-center space-x-1 text-red-600 hover:text-red-700"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span>{copied ? 'Copied!' : 'Copy Link'}</span>
@@ -264,7 +268,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
   // Authenticated view - Read-only dashboard
   if (isAuthenticated && dashboardData) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50" style={{ height: 'auto' }}>
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -299,9 +303,78 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         </div>
 
         {/* Dashboard Content */}
-        <div className="p-6">
+        <div className="p-6" style={{ paddingBottom: '20px' }}>
+          {(() => {
+            console.log('🔍 Rendering EnhancedGridLayout with:')
+            console.log('🔍 Widgets:', dashboardData.widgets || [])
+            console.log('🔍 Layouts:', dashboardData.layouts || {})
+            console.log('🔍 Widget count:', (dashboardData.widgets || []).length)
+            console.log('🔍 Dashboard data:', dashboardData)
+            
+            // Debug widget positions
+            const widgets = dashboardData.widgets || []
+            widgets.forEach((widget, index) => {
+              console.log(`🔍 Widget ${index + 1}:`, {
+                id: widget.i,
+                type: widget.type,
+                x: widget.x,
+                y: widget.y,
+                w: widget.w,
+                h: widget.h,
+                position: `(${widget.x}, ${widget.y})`,
+                size: `${widget.w}x${widget.h}`
+              })
+            })
+            
+            // Find max Y position
+            const maxY = Math.max(...widgets.map(w => (w.y || 0) + (w.h || 1)))
+            console.log('🔍 Max Y position:', maxY)
+            console.log('🔍 Estimated grid height needed:', maxY * 80 + 100, 'px')
+            
+            return null
+          })()}
           <EnhancedGridLayout
-            widgets={dashboardData.widgets || []}
+            key={`dashboard-${dashboardData.widgets?.length || 0}-${Date.now()}`}
+            widgets={(() => {
+              // Process and validate widgets to prevent overlaps
+              const rawWidgets = dashboardData.widgets || []
+              console.log('🔍 Raw widgets before processing:', rawWidgets)
+              
+              // First, ensure all widgets have valid properties
+              const validatedWidgets = rawWidgets.map((widget, index) => {
+                const processedWidget = {
+                  ...widget,
+                  i: widget.i || widget.id || `widget-${index}`,
+                  x: Math.max(0, widget.x || 0),
+                  y: Math.max(0, widget.y || 0),
+                  w: Math.max(1, widget.w || 3),
+                  h: Math.max(1, widget.h || 2),
+                  minW: Math.max(1, Math.min(widget.minW || 1, (widget.w || 3) - 1)),
+                  minH: Math.max(1, Math.min(widget.minH || 1, (widget.h || 2) - 1)),
+                  maxW: Math.max(widget.w || 3, Math.min(12, widget.maxW || 12)),
+                  maxH: Math.max(widget.h || 2, Math.min(10, widget.maxH || 10))
+                }
+                
+                // Ensure minW is always less than w, and minH is always less than h
+                if (processedWidget.minW >= processedWidget.w) {
+                  processedWidget.minW = Math.max(1, processedWidget.w - 1)
+                }
+                if (processedWidget.minH >= processedWidget.h) {
+                  processedWidget.minH = Math.max(1, processedWidget.h - 1)
+                }
+                
+                return processedWidget
+              })
+              
+              console.log('🔍 Validated widgets:', validatedWidgets)
+              
+              // Auto-fix any overlaps by repositioning widgets
+              const fixedWidgets = autoFixOverlaps(validatedWidgets, 12)
+              
+              console.log('🔍 Fixed widgets after overlap resolution:', fixedWidgets)
+              
+              return fixedWidgets
+            })()}
             layouts={dashboardData.layouts || {}}
             overlaps={[]}
             isValidating={false}
@@ -314,8 +387,15 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
             onWidgetSettings={() => {}} // Disabled for shared view
             showGridBackground={false}
             showStatusBar={false}
-            enableAutoFix={false}
-            className="h-[calc(100vh-120px)]"
+            enableAutoFix={true} // Enable auto-fix for shared view
+            className="w-full dashboard-view"
+            style={{ 
+              height: 'auto',
+              overflow: 'visible',
+              paddingBottom: '100px',
+              background: 'transparent',
+              minHeight: '600px'
+            }}
           />
         </div>
 

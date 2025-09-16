@@ -17,11 +17,11 @@ export const useDeviceStore = create(
           id: device.id || Date.now().toString(),
           name: device.name || 'New Device',
           type: device.type || 'sensor',
-          mqttTopic: device.mqttTopic || '',
           status: 'offline',
           lastSeen: null,
           config: device.config || {},
           location: device.location || '',
+          mqttTopic: device.mqttTopic || '',
           createdAt: new Date().toISOString(),
           ...device
         }

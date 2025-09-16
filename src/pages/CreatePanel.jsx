@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useNavigation } from '../hooks/useNavigation'
 import { usePanelStore } from '../stores/usePanelStore'
 import { useDeviceStore } from '../stores/useDeviceStore'
+import dashboardService from '../services/dashboardService'
 import { GaugeWidget } from '../components/widgets/gauge-widget'
 import { ChartWidget } from '../components/widgets/chart-widget'
 import { MapWidget } from '../components/widgets/map-widget'
@@ -11,20 +12,20 @@ import { ToggleWidget } from '../components/widgets/toggle-widget'
 import { SimpleSensorWidget } from '../components/widgets/simple-sensor-widget'
 import { SliderWidget } from '../components/widgets/slider-widget'
 import { Model3DWidget } from '../components/widgets/model3d-widget'
-import GridManager from '../components/grid/GridManager'
+import ProfessionalGridManager from '../components/grid/ProfessionalGridManager'
  
 function CreatePanel() {
   const navigate = useNavigate()
   const { handleNavigation } = useNavigation()
   const [searchParams] = useSearchParams()
   const [panelName, setPanelName] = useState('New Dashboard')
-  const [mqttConnected, setMqttConnected] = useState(false)
   const [showWidgetSettings, setShowWidgetSettings] = useState(false)
   const [selectedWidget, setSelectedWidget] = useState(null)
   const [widgetSettings, setWidgetSettings] = useState({})
   const [isOnline, setIsOnline] = useState(true)
   const [isPublishing, setIsPublishing] = useState(false)
   const [showSharingModal, setShowSharingModal] = useState(false)
+  const [mqttConnected, setMqttConnected] = useState(false)
   const [shareableLink, setShareableLink] = useState('')
   const [sharePassword, setSharePassword] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -39,7 +40,7 @@ function CreatePanel() {
 
   // Widget types available in the palette
   const widgetTypes = [
-    { type: 'gauge', name: 'Gauge', icon: GaugeWidget, color: 'bg-blue-500', bgClass: 'bg-blue-100', textClass: 'text-blue-600', component: GaugeWidget },
+    { type: 'gauge', name: 'Gauge', icon: GaugeWidget, color: 'bg-red-500', bgClass: 'bg-red-100', textClass: 'text-red-600', component: GaugeWidget },
     { type: 'chart', name: 'Chart', icon: ChartWidget, color: 'bg-red-500', bgClass: 'bg-red-100', textClass: 'text-red-600', component: ChartWidget },
     { type: 'toggle', name: 'Toggle', icon: ToggleWidget, color: 'bg-purple-500', bgClass: 'bg-purple-100', textClass: 'text-purple-600', component: ToggleWidget },
     { type: 'slider', name: 'Slider', icon: SliderWidget, color: 'bg-orange-500', bgClass: 'bg-orange-100', textClass: 'text-orange-600', component: SliderWidget },
@@ -49,11 +50,13 @@ function CreatePanel() {
     { type: 'sensor-tile', name: 'Sensor Tile', icon: SimpleSensorWidget, color: 'bg-teal-500', bgClass: 'bg-teal-100', textClass: 'text-teal-600', component: SimpleSensorWidget }
   ]
 
-  // For now, we'll simulate MQTT connection
   useEffect(() => {
-    setMqttConnected(true)
+    // Check MQTT connection status
+    if (window.mqttService) {
+      const status = window.mqttService.getConnectionStatus()
+      setMqttConnected(status.isConnected)
+    }
   }, [])
-
 
   // Handle editing existing panel or creating new panel
   useEffect(() => {
@@ -149,79 +152,82 @@ function CreatePanel() {
       case 'gauge':
         return (
           <GaugeWidget
-            value={widget.value || 50}
+            widgetId={widget.i}
+            title={widget.title || 'Gauge'}
+            min={widget.minValue || widget.min || 0}
             max={widget.maxValue || widget.max || 100}
-            label={widget.title || 'Gauge'}
-            color={widget.color || 'primary'}
+            unit={widget.unit || '%'}
+            color={widget.color || '#ef4444'}
+            autoGenerate={true}
           />
         )
       case 'chart':
         return (
           <ChartWidget
             widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
             title={widget.title || 'Chart'}
-            chartType={widget.chartType || 'line'}
-            color={widget.color || '#3b82f6'}
-            size="small"
+            chartType={widget.chartType || 'bar'}
+            color={widget.color || '#ef4444'}
+            autoGenerate={true}
           />
         )
       case 'map':
         return (
           <MapWidget
             widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
             title={widget.title || 'Device Map'}
             size="small"
+            mqttTopic={widget.mqttTopic}
           />
         )
       case 'notification':
         return (
           <NotificationWidget
             widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
             title={widget.title || 'Notifications'}
-            size="small"
+            autoGenerate={true}
           />
         )
       case 'toggle':
         return (
           <ToggleWidget
-            name={widget.title || 'Toggle'}
-            status={widget.status || false}
             widgetId={widget.i}
+            title={widget.title || 'Toggle'}
+            autoGenerate={true}
           />
         )
       case 'sensor-tile':
         return (
           <SimpleSensorWidget
-            value={widget.value || '0'}
+            widgetId={widget.i}
             title={widget.title || 'Sensor'}
-            unit={widget.unit || ''}
+            unit={widget.unit || '°C'}
+            min={widget.minValue || widget.min || 0}
+            max={widget.maxValue || widget.max || 100}
+            autoGenerate={true}
           />
         )
       case 'slider':
         return (
           <SliderWidget
             widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
-            title={widget.title || 'Slider Control'}
-            value={widget.value || 50}
+            title={widget.title || 'Slider'}
             min={widget.minValue || widget.min || 0}
             max={widget.maxValue || widget.max || 100}
-            color={widget.color || '#3b82f6'}
-            size="small"
+            unit={widget.unit || ''}
+            color={widget.color || '#ef4444'}
+            autoGenerate={true}
           />
         )
       case '3d-model':
         return (
           <Model3DWidget
             widgetId={widget.i}
-            mqttTopic={widget.mqttTopic}
             title={widget.title || '3D Model'}
             modelType={widget.modelType || 'cube'}
             color={widget.color || '#3b82f6'}
             size="small"
+            mqttTopic={widget.mqttTopic}
           />
         )
       default:
@@ -233,8 +239,20 @@ function CreatePanel() {
     }
   }, [handleWidgetSettings])
 
+  // Handle widgets change
+  const handleWidgetsChange = useCallback((widgets) => {
+    console.log('Widgets changed:', widgets)
+    // Update the current panel with new widgets
+    if (currentPanel) {
+      setCurrentPanel({
+        ...currentPanel,
+        widgets: widgets
+      })
+    }
+  }, [currentPanel, setCurrentPanel])
+
   // Handle save
-  const handleSave = useCallback((data) => {
+  const handleSave = useCallback(async (data) => {
     console.log('handleSave function called with data:', data)
     setIsSaving(true)
     
@@ -242,44 +260,174 @@ function CreatePanel() {
       // Store current grid data in ref for publishing
       currentGridDataRef.current = data
       
+      // Convert grid widgets to panel widget format if needed
+      const convertedWidgets = data.widgets.map(widget => {
+        // Create clean widget object without 'i' property for backend
+        const cleanWidget = {
+          id: widget.id || widget.i, // Use id or i as the main id
+          i: widget.id || widget.i, // Keep 'i' for grid layout compatibility
+          type: widget.type,
+          x: widget.x,
+          y: widget.y,
+          w: widget.w,
+          h: widget.h,
+          title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+          dataType: widget.dataType || 'int',
+          entryType: widget.entryType || 'automatic',
+          minValue: widget.minValue || 0,
+          maxValue: widget.maxValue || 100,
+          dataChannelId: widget.dataChannelId || 0
+        }
+        
+        // Remove any undefined values
+        Object.keys(cleanWidget).forEach(key => {
+          if (cleanWidget[key] === undefined) {
+            delete cleanWidget[key]
+          }
+        })
+        
+        return cleanWidget
+      })
+      
+      console.log('🔍 Converted widgets for publishing:', convertedWidgets)
+      
       const panelData = {
         name: panelName,
-        widgets: data.widgets,
+        widgets: convertedWidgets,
         layout: data.layouts,
-        deviceCount: data.widgets.length,
+        deviceCount: convertedWidgets.length,
         stats: data.stats
       }
       
       console.log('Saving panel data:', panelData)
-      console.log('Widgets being saved:', data.widgets)
+      console.log('Widgets being saved:', convertedWidgets)
       
       let savedPanel
       if (currentPanel) {
-        updatePanel(currentPanel.id, panelData)
-        savedPanel = { ...currentPanel, ...panelData }
-        console.log('Panel updated successfully:', panelData)
-        alert('Dashboard saved successfully!')
+        // Update existing panel
+        panelData.id = currentPanel.id
+        try {
+          const result = await dashboardService.updateDashboard(currentPanel.id, panelData)
+          updatePanel(currentPanel.id, panelData)
+          savedPanel = { ...currentPanel, ...panelData }
+          console.log('Panel updated successfully:', result)
+          alert('✅ New panel has been created!')
+          // Redirect to My Panels page after successful save
+          setTimeout(() => {
+            handleNavigation('/panels')
+          }, 1000)
+        } catch (backendError) {
+          console.log('Backend update failed, using local storage:', backendError.message)
+          throw backendError // This will trigger the fallback
+        }
       } else {
-        savedPanel = createPanel(panelData)
-        setCurrentPanel(savedPanel)
-        console.log('New panel created successfully:', panelData)
-        alert('New dashboard created and saved successfully!')
+        // Create new panel
+        try {
+          const result = await dashboardService.saveDashboard(panelData)
+          savedPanel = createPanel({ ...panelData, id: result.dashboard.id })
+          setCurrentPanel(savedPanel)
+          console.log('New panel created successfully:', result)
+          alert('✅ New panel has been created!')
+          // Redirect to My Panels page after successful save
+          setTimeout(() => {
+            handleNavigation('/panels')
+          }, 1000)
+        } catch (backendError) {
+          console.log('Backend create failed, using local storage:', backendError.message)
+          throw backendError // This will trigger the fallback
+        }
       }
       
       // Stay on the create page after saving
       console.log('Panel saved successfully, staying on create page')
     } catch (error) {
       console.error('Error saving dashboard:', error)
-      alert('Failed to save dashboard. Please try again.')
+      
+      // Fallback to local storage if backend fails
+      console.log('Backend save failed, falling back to local storage')
+      try {
+        // Recreate panelData for fallback since it's not in scope here
+        const convertedWidgets = data.widgets.map(widget => {
+          // Create clean widget object for local storage
+          const cleanWidget = {
+            id: widget.id || widget.i, // Use id or i as the main id
+            i: widget.id || widget.i, // Keep 'i' for local storage compatibility
+            type: widget.type,
+            x: widget.x,
+            y: widget.y,
+            w: widget.w,
+            h: widget.h,
+            title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+            dataType: widget.dataType || 'int',
+            entryType: widget.entryType || 'automatic',
+            minValue: widget.minValue || 0,
+            maxValue: widget.maxValue || 100,
+            dataChannelId: widget.dataChannelId || 0
+          }
+          
+          // Remove any undefined values
+          Object.keys(cleanWidget).forEach(key => {
+            if (cleanWidget[key] === undefined) {
+              delete cleanWidget[key]
+            }
+          })
+          
+          return cleanWidget
+        })
+        
+        const fallbackPanelData = {
+          name: panelName,
+          widgets: convertedWidgets,
+          layout: data.layouts,
+          deviceCount: convertedWidgets.length,
+          stats: data.stats
+        }
+        
+        let savedPanel
+        if (currentPanel) {
+          updatePanel(currentPanel.id, fallbackPanelData)
+          savedPanel = { ...currentPanel, ...fallbackPanelData }
+          alert('✅ New panel has been created!')
+          // Redirect to My Panels page after successful local save
+          setTimeout(() => {
+            handleNavigation('/panels')
+          }, 1000)
+        } else {
+          savedPanel = createPanel(fallbackPanelData)
+          setCurrentPanel(savedPanel)
+          alert('✅ New panel has been created!')
+          // Redirect to My Panels page after successful local save
+          setTimeout(() => {
+            handleNavigation('/panels')
+          }, 1000)
+        }
+      } catch (fallbackError) {
+        console.error('Fallback save also failed:', fallbackError)
+        alert('Failed to save dashboard. Please try again.')
+      }
     } finally {
       setIsSaving(false)
     }
   }, [panelName, currentPanel, createPanel, updatePanel, setCurrentPanel, navigate])
 
   // Handle save button click
-  const handleSaveClick = useCallback(() => {
+  const handleSaveClick = useCallback(async () => {
     console.log('Save button clicked!')
+    console.log('Current panel state:', currentPanel)
+    console.log('Panel name:', panelName)
     console.log('handleSave function:', handleSave)
+    
+    // Check backend health first
+    try {
+      const isBackendHealthy = await dashboardService.checkBackendHealth()
+      if (!isBackendHealthy) {
+        console.log('Backend is not available, will use local storage fallback')
+      } else {
+        console.log('Backend is healthy, will attempt to save to backend')
+      }
+    } catch (error) {
+      console.log('Backend health check failed, will use local storage fallback')
+    }
     
     // Get current grid data and save
     const saveEvent = new CustomEvent('gridManagerSave', {
@@ -287,7 +435,7 @@ function CreatePanel() {
     })
     window.dispatchEvent(saveEvent)
     console.log('Save event dispatched with callback:', handleSave)
-  }, [handleSave])
+  }, [handleSave, currentPanel, panelName])
 
 
   // Separate function to handle the actual publishing after save
@@ -300,63 +448,86 @@ function CreatePanel() {
         id: currentPanel?.id || `demo-panel-${Date.now()}`,
         name: panelName || 'Demo Dashboard',
         widgets: gridData?.widgets || [],
-        layout: gridData?.layouts || {},
+        layouts: gridData?.layouts || {}, // Fixed: was layout, should be layouts
         deviceCount: gridData?.widgets?.length || 0,
         stats: gridData?.stats || { totalWidgets: 0, gridUtilization: 0 },
         createdAt: currentPanel?.createdAt || new Date().toISOString()
       }
       
-      // Simulate publishing process
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Generate shareable link using the new shared route structure
-      const baseUrl = window.location.origin
-      const shareableId = `panel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const generatedLink = `${baseUrl}/shared/${shareableId}`
-      
-      // Generate random password
-      const generatedPassword = Math.random().toString(36).substring(2, 8).toUpperCase()
-      
-      // Update panel to published status with sharing info
-      updatePanel(panelToPublish.id, { 
-        ...panelToPublish, 
-        isPublished: true, 
-        publishedAt: new Date().toISOString(),
-        shareableLink: generatedLink,
-        sharePassword: generatedPassword,
-        shareableId: shareableId
-      })
+      // Try to publish via backend API
+      try {
+        const result = await dashboardService.publishDashboard(panelToPublish)
+        console.log('Dashboard published via backend:', result)
+        
+        // Update local panel with published status
+        updatePanel(panelToPublish.id, { 
+          ...panelToPublish, 
+          isPublished: true, 
+          publishedAt: result.dashboard.publishedAt,
+          shareableLink: result.dashboard.shareableLink,
+          sharePassword: result.dashboard.sharePassword,
+          shareableId: result.dashboard.shareableId
+        })
+        
+        // Set sharing data for modal
+        setShareableLink(result.dashboard.shareableLink)
+        setSharePassword(result.dashboard.sharePassword)
+        
+        console.log('About to show sharing modal...')
+        console.log('shareableLink:', result.dashboard.shareableLink)
+        console.log('sharePassword:', result.dashboard.sharePassword)
+        
+        // Show sharing modal
+        setShowSharingModal(true)
+        
+        console.log('Dashboard published successfully via backend!')
+        
+      } catch (backendError) {
+        console.error('Backend publish failed, falling back to local:', backendError)
+        
+        // Fallback to local publishing
+        const baseUrl = window.location.origin
+        const shareableId = `panel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        const generatedLink = `${baseUrl}/shared/${shareableId}`
+        const generatedPassword = Math.random().toString(36).substring(2, 8).toUpperCase()
+        
+        // Update panel to published status with sharing info
+        updatePanel(panelToPublish.id, { 
+          ...panelToPublish, 
+          isPublished: true, 
+          publishedAt: new Date().toISOString(),
+          shareableLink: generatedLink,
+          sharePassword: generatedPassword,
+          shareableId: shareableId
+        })
 
-      // Save the published dashboard data for shared access
-      const publishedData = {
-        panelId: shareableId,
-        widgets: panelToPublish.widgets || [],
-        layouts: panelToPublish.layout || {},
-        title: panelToPublish.name || 'Shared Dashboard',
-        stats: { totalWidgets: (panelToPublish.widgets || []).length, gridUtilization: 0 },
-        sharePassword: generatedPassword,
-        publishedAt: new Date().toISOString(),
-        isShared: true
+        // Save the published dashboard data for shared access
+        const publishedData = {
+          panelId: shareableId,
+          widgets: panelToPublish.widgets || [],
+          layouts: panelToPublish.layouts || {}, // Fixed: was layout, should be layouts
+          title: panelToPublish.name || 'Shared Dashboard',
+          stats: { totalWidgets: (panelToPublish.widgets || []).length, gridUtilization: 0 },
+          sharePassword: generatedPassword,
+          publishedAt: new Date().toISOString(),
+          isShared: true
+        }
+        
+        // Store in localStorage for demo purposes
+        console.log('🔍 Publishing data to localStorage:', publishedData)
+        console.log('🔍 Widgets being published:', publishedData.widgets)
+        console.log('🔍 Layouts being published:', publishedData.layouts)
+        localStorage.setItem(`published-${shareableId}`, JSON.stringify(publishedData))
+        
+        // Set sharing data for modal
+        setShareableLink(generatedLink)
+        setSharePassword(generatedPassword)
+        
+        // Show sharing modal
+        setShowSharingModal(true)
+        
+        console.log('Dashboard published locally (backend unavailable)!')
       }
-      
-      // Store in localStorage for demo purposes (this would be stored in a database in production)
-      localStorage.setItem(`published-${shareableId}`, JSON.stringify(publishedData))
-      
-      // Set sharing data for modal
-      setShareableLink(generatedLink)
-      setSharePassword(generatedPassword)
-      
-      console.log('About to show sharing modal...')
-      console.log('shareableLink:', generatedLink)
-      console.log('sharePassword:', generatedPassword)
-      
-      // Show sharing modal
-      setShowSharingModal(true)
-      
-      console.log('Dashboard published successfully!')
-      console.log('Shareable link:', generatedLink)
-      console.log('Password:', generatedPassword)
-      console.log('showSharingModal should be true now')
       
     } catch (error) {
       console.error('Error in publishDashboard:', error)
@@ -468,18 +639,11 @@ function CreatePanel() {
         </div>
       </div>
 
-      {/* Grid Manager */}
-      <GridManager
-        ref={gridManagerRef}
-        title={panelName}
+      {/* Professional Grid Manager */}
+      <ProfessionalGridManager
         initialWidgets={currentPanel?.widgets || []}
-        initialLayouts={currentPanel?.layout || {}}
-        renderWidget={renderWidget}
-        onSave={handleSave}
-        onWidgetSettings={handleWidgetSettings}
-        showPalette={true}
-        showToolbar={true}
-        widgetTypes={widgetTypes}
+        onWidgetsChange={handleWidgetsChange}
+        isPreviewMode={false}
         className="h-[calc(100vh-60px)]"
       />
 
@@ -670,7 +834,7 @@ function CreatePanel() {
                         navigator.clipboard.writeText(shareableLink)
                         alert('Link copied to clipboard!')
                       }}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                     >
                       Copy
                     </button>
@@ -692,7 +856,7 @@ function CreatePanel() {
                         navigator.clipboard.writeText(sharePassword)
                         alert('Password copied to clipboard!')
                       }}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                     >
                       Copy
                     </button>
@@ -700,9 +864,9 @@ function CreatePanel() {
                 </div>
 
                 {/* Sharing Instructions */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">How to Share:</h4>
-                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-red-900 mb-2">How to Share:</h4>
+                  <ol className="text-sm text-red-800 space-y-1 list-decimal list-inside">
                     <li>Share the link above with your team members</li>
                     <li>Provide them with the access password</li>
                     <li>Shared users can view and control the dashboard</li>
