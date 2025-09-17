@@ -4,6 +4,7 @@ import { useNavigation } from '../hooks/useNavigation'
 import { usePanelStore } from '../stores/usePanelStore'
 import { useDeviceStore } from '../stores/useDeviceStore'
 import dashboardService from '../services/dashboardService'
+import { Hash, Copy, Check } from 'lucide-react'
 import { GaugeWidget } from '../components/widgets/gauge-widget'
 import { ChartWidget } from '../components/widgets/chart-widget'
 import { MapWidget } from '../components/widgets/map-widget'
@@ -29,6 +30,7 @@ function CreatePanel() {
   const [shareableLink, setShareableLink] = useState('')
   const [sharePassword, setSharePassword] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isTopicIdCopied, setIsTopicIdCopied] = useState(false)
   
   const { createPanel, updatePanel, currentPanel, setCurrentPanel, panels } = usePanelStore()
   const { devices, addDevice } = useDeviceStore()
@@ -37,6 +39,19 @@ function CreatePanel() {
   const currentGridDataRef = useRef(null)
   // Ref to access GridManager methods
   const gridManagerRef = useRef(null)
+
+  // Copy topic ID function
+  const copyTopicId = async () => {
+    if (currentPanel?.topicId) {
+      try {
+        await navigator.clipboard.writeText(currentPanel.topicId)
+        setIsTopicIdCopied(true)
+        setTimeout(() => setIsTopicIdCopied(false), 2000)
+      } catch (error) {
+        console.error('Failed to copy topic ID:', error)
+      }
+    }
+  }
 
   // Widget types available in the palette
   const widgetTypes = [
@@ -616,15 +631,38 @@ function CreatePanel() {
             </button>
           </div>
           
-          {/* Center - Panel Name */}
-          <div className="flex items-center space-x-4">
-            <input
-              type="text"
-              value={panelName}
-              onChange={(e) => setPanelName(e.target.value)}
-              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 text-center"
-            />
-            <span className="text-sm text-gray-500">Dashboard Editor</span>
+          {/* Center - Panel Name & Topic ID */}
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                value={panelName}
+                onChange={(e) => setPanelName(e.target.value)}
+                className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 text-center"
+              />
+              <span className="text-sm text-gray-500">Dashboard Editor</span>
+            </div>
+            
+            {/* Topic ID Display */}
+            {currentPanel?.topicId && (
+              <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1 rounded-lg border">
+                <Hash className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-mono text-gray-700">
+                  Topic ID: {currentPanel.topicId}
+                </span>
+                <button
+                  onClick={copyTopicId}
+                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  title="Copy Topic ID"
+                >
+                  {isTopicIdCopied ? (
+                    <Check className="w-3 h-3 text-green-600" />
+                  ) : (
+                    <Copy className="w-3 h-3 text-gray-500" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Right side - Online/Offline Indicator */}

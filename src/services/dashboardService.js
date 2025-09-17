@@ -179,6 +179,32 @@ class DashboardService {
   }
 
   /**
+   * Generate a new topic ID
+   * @returns {Promise<Object>} Response with topic ID
+   */
+  async generateTopicId() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/generate-topic-id`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate topic ID');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error generating topic ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if backend is available
    * @returns {Promise<boolean>} True if backend is available
    */
