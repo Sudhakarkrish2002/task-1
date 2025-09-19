@@ -9,7 +9,6 @@ import {
   Edit, 
   Copy, 
   Trash2, 
-  Share2, 
   Calendar,
   Users,
   Settings,
@@ -17,7 +16,6 @@ import {
   List
 } from 'lucide-react'
 import { usePanels, usePanelActions, usePanelStore } from '../stores/usePanelStore'
-import PanelSharing from '../components/panels/PanelSharing'
 import CreateDashboardModal from '../components/CreateDashboardModal'
 
 function MyPanels() {
@@ -25,7 +23,6 @@ function MyPanels() {
   const { handleNavigation } = useNavigation()
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'table'
-  const [showSharingModal, setShowSharingModal] = useState(false)
   const [selectedPanel, setSelectedPanel] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [panelToDelete, setPanelToDelete] = useState(null)
@@ -87,10 +84,6 @@ function MyPanels() {
     alert('Panel duplicated successfully!')
   }
 
-  const handleSharePanel = (panel) => {
-    setSelectedPanel(panel)
-    setShowSharingModal(true)
-  }
 
   const handleDeletePanel = (panel) => {
     setPanelToDelete(panel)
@@ -281,13 +274,6 @@ function MyPanels() {
                       <Copy className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={() => handleSharePanel(panel)}
-                      className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                      title="Share Panel"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button 
                       onClick={() => handleDeletePanel(panel)}
                       className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-red-600 hover:text-red-800"
                       title="Delete Panel"
@@ -312,13 +298,6 @@ function MyPanels() {
                     title="Duplicate Panel"
                   >
                     <Copy className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleSharePanel(panel)}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    title="Share Panel"
-                  >
-                    <Share2 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => handleDeletePanel(panel)}
@@ -382,13 +361,6 @@ function MyPanels() {
                           <Copy className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleSharePanel(panel)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Share Panel"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
-                        <button 
                           onClick={() => handleDeletePanel(panel)}
                           className="text-red-600 hover:text-red-900"
                           title="Delete Panel"
@@ -421,13 +393,6 @@ function MyPanels() {
         )}
       </div>
 
-      {/* Panel Sharing Modal */}
-      <PanelSharing 
-        isOpen={showSharingModal}
-        onClose={() => setShowSharingModal(false)}
-        panelName={selectedPanel?.name || "Panel"}
-        panelId={selectedPanel?.id}
-      />
 
       {/* Create Dashboard Modal */}
       <CreateDashboardModal

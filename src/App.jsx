@@ -148,11 +148,14 @@ function AppContent() {
     return null
   }
 
+  // Check if we're on a shared dashboard route
+  const isSharedDashboard = location.pathname.startsWith('/shared/')
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Global Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      {/* Global Navigation - Hidden for shared dashboards */}
+      {!isSharedDashboard && (
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Brand */}
@@ -269,9 +272,10 @@ function AppContent() {
           )}
         </div>
       </nav>
+      )}
 
       {/* Main Content */}
-      <div className="main-content flex-1">
+      <div className={`main-content flex-1 ${isSharedDashboard ? 'pt-0' : ''}`}>
         <ErrorBoundary>
           <Suspense fallback={<LoadingSpinner fullScreen text="Loading page..." />}>
           <Routes>
@@ -293,11 +297,11 @@ function AppContent() {
         </ErrorBoundary>
       </div>
 
-      {/* Global ChatBot */}
-      <ChatBot />
+      {/* Global ChatBot - Hidden for shared dashboards */}
+      {!isSharedDashboard && <ChatBot />}
       
-      {/* Scroll to Top Button */}
-      <ScrollToTopButton />
+      {/* Scroll to Top Button - Hidden for shared dashboards */}
+      {!isSharedDashboard && <ScrollToTopButton />}
     </div>
   )
 }

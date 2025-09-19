@@ -11,7 +11,37 @@ import { ToggleWidget } from './widgets/toggle-widget'
 import { SimpleSensorWidget } from './widgets/simple-sensor-widget'
 import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
+import sharingService from '../services/sharingService'
 import './SharedDashboardView.css'
+
+// Device detection hook for responsive behavior
+const useDeviceType = () => {
+  const [deviceType, setDeviceType] = useState('desktop')
+  
+  useEffect(() => {
+    const checkDeviceType = () => {
+      const width = window.innerWidth
+      if (width <= 768) {
+        setDeviceType('mobile')
+      } else if (width <= 1024) {
+        setDeviceType('tablet')
+      } else {
+        setDeviceType('desktop')
+      }
+    }
+    
+    checkDeviceType()
+    window.addEventListener('resize', checkDeviceType)
+    return () => window.removeEventListener('resize', checkDeviceType)
+  }, [])
+  
+  return {
+    isMobile: deviceType === 'mobile',
+    isTablet: deviceType === 'tablet',
+    isDesktop: deviceType === 'desktop',
+    deviceType
+  }
+}
 
 /**
  * Shared Dashboard View Component
@@ -24,6 +54,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const { isMobile, isTablet, isDesktop } = useDeviceType()
 
   // Load dashboard data
   useEffect(() => {
@@ -31,23 +62,73 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
       try {
         setIsLoading(true)
         
-        // Try to get from localStorage first (for demo)
-        const storedData = localStorage.getItem(`published-${panelId}`)
-        if (storedData) {
-          const data = JSON.parse(storedData)
-          console.log('🔍 SharedDashboardView - Loaded data:', data)
-          console.log('🔍 Widgets count:', data.widgets?.length || 0)
-          console.log('🔍 Layouts:', data.layouts)
-          console.log('🔍 Widgets data:', data.widgets)
-          setDashboardData(data)
+        // Try to get from backend API first
+        try {
+          const response = await fetch(`/api/dashboard/shared/${panelId}`)
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success) {
+              console.log('🔍 SharedDashboardView - Loaded data from backend:', result.dashboard)
+              console.log('🔍 Widgets count:', result.dashboard.widgets?.length || 0)
+              console.log('🔍 Layouts:', result.dashboard.layouts)
+              console.log('🔍 Widgets data:', result.dashboard.widgets)
+              
+              // Normalize the data structure
+              const normalizedData = {
+                ...result.dashboard,
+                layouts: result.dashboard.layouts || result.dashboard.layout || {}
+              }
+              setDashboardData(normalizedData)
+              setIsLoading(false)
+              return
+            }
+          }
+        } catch (apiError) {
+          console.log('Backend API not available, trying local sources:', apiError)
+        }
+        
+        // Try to get from sharing service
+        const shareResult = sharingService.getSharedPanel(panelId)
+        if (shareResult.success) {
+          console.log('🔍 SharedDashboardView - Loaded data from sharing service:', shareResult.panel)
+          console.log('🔍 Widgets count:', shareResult.panel.widgets?.length || 0)
+          console.log('🔍 Layouts:', shareResult.panel.layouts || shareResult.panel.layout)
+          console.log('🔍 Widgets data:', shareResult.panel.widgets)
+          
+          // Normalize the data structure
+          const normalizedData = {
+            ...shareResult.panel,
+            layouts: shareResult.panel.layouts || shareResult.panel.layout || {}
+          }
+          setDashboardData(normalizedData)
           setIsLoading(false)
           return
         }
 
-        // If not found in localStorage, show error
-        setError('Dashboard not found or has expired')
+        // Fallback to localStorage for backward compatibility
+        const storedData = localStorage.getItem(`published-${panelId}`)
+        if (storedData) {
+          const data = JSON.parse(storedData)
+          console.log('🔍 SharedDashboardView - Loaded data from localStorage:', data)
+          console.log('🔍 Widgets count:', data.widgets?.length || 0)
+          console.log('🔍 Layouts:', data.layouts)
+          console.log('🔍 Widgets data:', data.widgets)
+          
+          // Normalize the data structure
+          const normalizedData = {
+            ...data,
+            layouts: data.layouts || data.layout || {}
+          }
+          setDashboardData(normalizedData)
+          setIsLoading(false)
+          return
+        }
+
+        // If not found anywhere, show error
+        setError(shareResult.error || 'Dashboard not found or has expired')
         setIsLoading(false)
       } catch (err) {
+        console.error('Error loading shared dashboard:', err)
         setError('Failed to load dashboard')
         setIsLoading(false)
       }
@@ -85,95 +166,87 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     setTimeout(() => setCopied(false), 2000)
   }, [])
 
-  // Widget renderer function for shared view
+  // Responsive grid calculation
+  const getResponsiveGridConfig = useCallback(() => {
+    return {
+      breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
+      cols: { lg: 12, md: 8, sm: 4, xs: 2, xxs: 1 },
+      rowHeight: 80,
+      margin: [12, 12],
+      containerPadding: [12, 12, 24, 12]
+    }
+  }, [])
+
+  // Calculate responsive widget dimensions
+  const calculateWidgetDimensions = useCallback((widget) => {
+    const baseWidth = Math.max(3, Math.floor((widget.w || 4) * 0.85))
+    const baseHeight = Math.max(3, Math.floor((widget.h || 3) * 0.85))
+    
+    return {
+      w: baseWidth,
+      h: baseHeight,
+      minW: 3,
+      minH: 3,
+      // Responsive dimensions for different breakpoints
+      lg: { w: baseWidth, h: baseHeight },
+      md: { w: Math.min(8, Math.max(3, Math.ceil(baseWidth * 0.8))), h: Math.max(3, Math.ceil(baseHeight * 0.9)) },
+      sm: { w: Math.min(6, Math.max(3, Math.ceil(baseWidth * 0.7))), h: Math.max(3, Math.ceil(baseHeight * 0.8)) },
+      xs: { w: 3, h: Math.max(3, Math.ceil(baseHeight * 0.7)) },
+      xxs: { w: 2, h: Math.max(3, Math.ceil(baseHeight * 0.6)) }
+    }
+  }, [])
+
+  // Render widget based on type
   const renderWidget = useCallback((widget) => {
+    console.log('🔍 Rendering widget:', widget)
+    
     const commonProps = {
-      widgetId: widget.i || widget.id,
-      panelId: 'shared',
-      autoGenerate: true
+      id: widget.id,
+      data: widget.data || {},
+      isReadOnly: true,
+      isShared: true
     }
 
+    console.log('🔍 Common props for widget:', commonProps)
+
+    let renderedWidget
     switch (widget.type) {
       case 'gauge':
-        return (
-          <GaugeWidget
-            {...commonProps}
-            title={widget.title || 'Gauge'}
-            min={widget.minValue || 0}
-            max={widget.maxValue || 100}
-            unit={widget.unit || '%'}
-            color={widget.color || '#ef4444'}
-          />
-        )
+        renderedWidget = <GaugeWidget key={widget.id} {...commonProps} />
+        break
       case 'chart':
-        return (
-          <ChartWidget
-            {...commonProps}
-            title={widget.title || 'Chart'}
-            chartType={widget.chartType || 'bar'}
-            color={widget.color || '#ef4444'}
-          />
-        )
+        renderedWidget = <ChartWidget key={widget.id} {...commonProps} />
+        break
       case 'map':
-        return (
-          <MapWidget
-            {...commonProps}
-            title={widget.title || 'Device Map'}
-            center={widget.center || [37.7749, -122.4194]}
-            zoom={widget.zoom || 10}
-          />
-        )
+        renderedWidget = <MapWidget key={widget.id} {...commonProps} />
+        break
       case 'notification':
-        return (
-          <NotificationWidget
-            {...commonProps}
-            title={widget.title || 'Notifications'}
-          />
-        )
+        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} />
+        break
       case 'toggle':
-        return (
-          <ToggleWidget
-            {...commonProps}
-            title={widget.title || 'Toggle'}
-          />
-        )
+        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} />
+        break
+      case 'sensor':
       case 'sensor-tile':
-        return (
-          <SimpleSensorWidget
-            {...commonProps}
-            title={widget.title || 'Sensor'}
-            unit={widget.unit || '°C'}
-            min={widget.minValue || 0}
-            max={widget.maxValue || 100}
-          />
-        )
+        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} />
+        break
       case 'slider':
-        return (
-          <SliderWidget
-            {...commonProps}
-            title={widget.title || 'Slider'}
-            min={widget.minValue || 0}
-            max={widget.maxValue || 100}
-            unit={widget.unit || ''}
-            color={widget.color || '#ef4444'}
-          />
-        )
+        renderedWidget = <SliderWidget key={widget.id} {...commonProps} />
+        break
+      case 'model3d':
       case '3d-model':
-        return (
-          <Model3DWidget
-            {...commonProps}
-            title={widget.title || '3D Model'}
-            modelType={widget.modelType || 'cube'}
-            color={widget.color || '#3b82f6'}
-          />
-        )
+        renderedWidget = <Model3DWidget key={widget.id} {...commonProps} />
+        break
       default:
-        return (
-          <div className="w-full h-full bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center">
-            <span className="text-gray-500">{widget.type || 'Widget'}</span>
+        renderedWidget = (
+          <div key={widget.id} className="p-4 bg-gray-100 rounded-lg text-center text-gray-500">
+            Unknown widget type: {widget.type}
           </div>
         )
     }
+    
+    console.log('🔍 Rendered widget:', renderedWidget)
+    return renderedWidget
   }, [])
 
   // Loading state
@@ -181,25 +254,32 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard...</h2>
+          <p className="text-gray-600">Please wait while we load the shared dashboard</p>
         </div>
       </div>
     )
   }
 
   // Error state
-  if (error && !dashboardData) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <p className="font-medium">Error</p>
-            <p>{error}</p>
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4 text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
           </div>
-          <Button onClick={() => window.location.href = '/'}>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Dashboard Not Found</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
             Go to Home
-          </Button>
+          </button>
         </div>
       </div>
     )
@@ -250,14 +330,23 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
           </form>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Dashboard: {dashboardData?.title}</span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Dashboard:</span>
               <button
                 onClick={copyLink}
-                className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 mr-1" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy Link
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -266,133 +355,128 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     )
   }
 
-  // Authenticated view - Read-only dashboard
+  // Main dashboard view
   if (isAuthenticated && dashboardData) {
+    const gridConfig = getResponsiveGridConfig()
+    const widgets = dashboardData.widgets || []
+    const layouts = dashboardData.layouts || {}
+
+    console.log('🔍 Rendering dashboard with:', {
+      widgetsCount: widgets.length,
+      widgets: widgets,
+      layouts: layouts,
+      dashboardData: dashboardData
+    })
+
+    // Convert widgets to grid items with responsive dimensions
+    const gridItems = widgets.map(widget => {
+      const dimensions = calculateWidgetDimensions(widget)
+      return {
+        ...widget,
+        ...dimensions,
+        i: widget.i || widget.id, // Ensure 'i' property exists for grid layout
+        x: widget.x || 0,
+        y: widget.y || 0
+      }
+    })
+
+    console.log('🔍 Grid items after conversion:', gridItems)
+
+    // Auto-fix overlaps for better layout
+    const fixedItems = autoFixOverlaps(gridItems, { cols: 12, rowHeight: 80 })
+    
+    console.log('🔍 Fixed items after overlap fix:', fixedItems)
+
     return (
-      <div className="min-h-screen bg-gray-50" style={{ height: 'auto' }}>
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-              <div className="flex items-center space-x-2">
-                <Eye className="w-5 h-5 text-green-600" />
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {dashboardData.title}
-                </h1>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
-                <span>Widgets: {dashboardData.stats?.totalWidgets || 0}</span>
-                <span>•</span>
-                <span>Shared Dashboard</span>
-                <span>•</span>
-                <span className="text-green-600 font-medium">View Only</span>
-              </div>
+      <div className="min-h-screen bg-gray-50">
+        {/* Shared Dashboard Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {dashboardData.title || 'Shared Dashboard'}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Shared dashboard • {widgets.length} widgets
+              </p>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                {isMobile ? 'Mobile' : isTablet ? 'Tablet' : 'Desktop'} View
+              </div>
+              <button
                 onClick={copyLink}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
+                className="flex items-center px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy Link'}</span>
-              </Button>
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 mr-1" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy Link
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Dashboard Content */}
-        <div className="p-4 sm:p-6" style={{ paddingBottom: '20px' }}>
-          {(() => {
-            console.log('🔍 Rendering Shared Dashboard with:')
-            console.log('🔍 Widgets:', dashboardData.widgets || [])
-            console.log('🔍 Widget count:', (dashboardData.widgets || []).length)
-            
-            // Process widgets for display
-            const rawWidgets = dashboardData.widgets || []
-            const processedWidgets = rawWidgets.map((widget, index) => ({
-              ...widget,
-              i: widget.i || widget.id || `widget-${index}`,
-              x: Math.max(0, widget.x || 0),
-              y: Math.max(0, widget.y || 0),
-              w: Math.max(1, widget.w || 3),
-              h: Math.max(1, widget.h || 2)
-            }))
-            
-            console.log('🔍 Processed widgets:', processedWidgets)
-            
-            return null
-          })()}
-          
-          {/* Custom Grid Layout for Shared Dashboard */}
-          <div className="shared-dashboard-grid">
-            {(() => {
-              const widgets = dashboardData.widgets || []
-              const processedWidgets = widgets.map((widget, index) => ({
-                ...widget,
-                i: widget.i || widget.id || `widget-${index}`,
-                x: Math.max(0, widget.x || 0),
-                y: Math.max(0, widget.y || 0),
-                w: Math.max(1, widget.w || 3),
-                h: Math.max(1, widget.h || 2)
-              }))
-              
-              // Calculate grid dimensions
-              const maxY = Math.max(...processedWidgets.map(w => (w.y || 0) + (w.h || 1)), 0)
-              const gridHeight = Math.max(maxY * 96 + 100, 400) // 96px per row (80px + 16px margin)
-              
-              return (
-                <div 
-                  className="relative w-full"
-                  style={{ 
-                    height: `${gridHeight}px`,
-                    minHeight: '400px'
-                  }}
-                >
-                  {processedWidgets.map((widget) => {
-                    const left = widget.x * 96 // 96px per column (80px + 16px margin)
-                    const top = widget.y * 96
-                    const width = widget.w * 96 - 16 // Subtract margin
-                    const height = widget.h * 96 - 16 // Subtract margin
-                    
-                    return (
-                      <div
-                        key={widget.i}
-                        className="widget-container"
-                        style={{
-                          left: `${left}px`,
-                          top: `${top}px`,
-                          width: `${width}px`,
-                          height: `${height}px`,
-                          zIndex: 1
-                        }}
-                      >
-                        <div className="widget-content">
-                          {renderWidget(widget)}
-                        </div>
-                      </div>
-                    )
-                  })}
+        {/* Responsive Grid Layout for Shared Dashboard */}
+        <div className="shared-dashboard-grid">
+          {fixedItems.length > 0 ? (
+            <EnhancedGridLayout
+              className="layout"
+              widgets={fixedItems}
+              layouts={{ lg: fixedItems }}
+              breakpoints={gridConfig.breakpoints}
+              cols={gridConfig.cols}
+              rowHeight={gridConfig.rowHeight}
+              margin={gridConfig.margin}
+              containerPadding={gridConfig.containerPadding}
+              isDraggable={false}
+              isResizable={false}
+              isBounded={true}
+              preventCollision={true}
+              useCSSTransforms={true}
+              compactType="vertical"
+              renderWidget={renderWidget}
+              isPreviewMode={true}
+              showGridBackground={false}
+              showStatusBar={false}
+            />
+          ) : (
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
                 </div>
-              )
-            })()}
-          </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Empty Dashboard</h3>
+                <p className="text-gray-600 mb-4">
+                  No widgets found in this shared dashboard.
+                </p>
+                <div className="text-sm text-gray-500">
+                  <p>Debug info:</p>
+                  <p>Widgets count: {widgets.length}</p>
+                  <p>Grid items: {gridItems.length}</p>
+                  <p>Fixed items: {fixedItems.length}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-gray-600">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-              <span>Published: {new Date(dashboardData.publishedAt).toLocaleDateString()}</span>
-              <span>•</span>
-              <span>Panel ID: {dashboardData.panelId}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Connected</span>
-            </div>
+        <div className="bg-white border-t border-gray-200 px-6 py-4 mt-8">
+          <div className="text-center text-sm text-gray-500">
+            <p>This is a shared dashboard. Editing is disabled.</p>
+            <p className="mt-1">
+              Shared on {new Date(dashboardData.publishedAt || Date.now()).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>

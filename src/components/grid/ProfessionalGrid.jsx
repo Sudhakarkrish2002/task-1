@@ -13,6 +13,8 @@ export const ProfessionalGrid = ({
   onWidgetUpdate,
   onWidgetSettings,
   isPreviewMode = false,
+  isMobile = false,
+  isTablet = false,
   className = '',
   style = {}
 }) => {
@@ -252,8 +254,18 @@ export const ProfessionalGrid = ({
         {widgets.map(widget => (
           <div
             key={widget.id}
-            className={`grid-widget ${selectedWidget === widget.id ? 'selected' : ''}`}
-            style={{
+            className={`grid-widget ${selectedWidget === widget.id ? 'selected' : ''} ${isMobile ? 'mobile-widget' : ''}`}
+            style={isMobile ? {
+              // Mobile card layout - no absolute positioning
+              position: 'relative',
+              left: 'auto',
+              top: 'auto',
+              width: '100%',
+              height: 'auto',
+              minHeight: '120px',
+              marginBottom: '16px'
+            } : {
+              // Desktop grid layout
               left: `${widget.x * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
               top: `${widget.y * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
               width: `${widget.w * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`,
@@ -324,7 +336,7 @@ const getWidgetSize = (widgetType) => {
   const sizes = {
     'gauge': { w: 3, h: 3 },
     'chart': { w: 4, h: 4 },
-    'toggle': { w: 2, h: 2 },
+    'toggle': { w: 3, h: 3 },
     'slider': { w: 3, h: 2 },
     'map': { w: 6, h: 5 },
     'notification': { w: 3, h: 4 },

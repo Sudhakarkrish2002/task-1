@@ -2,98 +2,237 @@
 
 /* Custom Grid Layout for Shared Dashboard */
 .shared-dashboard-grid {
-  width: 100%;
-  position: relative;
-  background: transparent;
-  overflow: visible;
+  padding: 12px;
+  min-height: calc(100vh - 200px);
 }
 
-/* Widget containers */
 .shared-dashboard-grid .widget-container {
-  position: absolute;
   background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: all 0.2s ease;
+  min-height: 240px;
+  min-width: 240px;
 }
 
 .shared-dashboard-grid .widget-container:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
-/* Widget content */
 .shared-dashboard-grid .widget-content {
-  width: 100%;
   height: 100%;
-  padding: 8px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .shared-dashboard-grid {
+    padding: 8px;
+  }
+
+  .shared-dashboard-grid .widget-container {
+    margin-bottom: 16px;
+    border-radius: 8px;
+  }
+
+  .shared-dashboard-grid .widget-container:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .shared-dashboard-grid .widget-content {
+    padding: 12px;
+  }
+}
+
+/* Tablet Responsive Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .shared-dashboard-grid {
+    padding: 12px;
+  }
+
+  .shared-dashboard-grid .widget-container {
+    border-radius: 10px;
+  }
+
+  .shared-dashboard-grid .widget-content {
+    padding: 16px;
+  }
+}
+
+/* Desktop Styles */
+@media (min-width: 1025px) {
+  .shared-dashboard-grid .widget-content {
+    padding: 20px;
+  }
+}
+
+/* Mobile-specific widget adjustments */
+@media (max-width: 768px) {
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] {
+    padding: 16px;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .flex-1 {
+    min-height: 60px;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .space-y-4 > * + * {
+    margin-top: 12px;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .text-xs {
+    font-size: 0.75rem;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .w-4.h-4 {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .shared-dashboard-grid .mobile-widget[data-widget-type="toggle"] .px-4.pb-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+/* Grid Layout Overrides for Shared Dashboard */
+.shared-dashboard-grid .react-grid-layout {
+  position: relative;
+}
+
+.shared-dashboard-grid .react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.shared-dashboard-grid .react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.shared-dashboard-grid .react-grid-item > .react-resizable-handle {
+  display: none; /* Hide resize handles in shared mode */
+}
+
+.shared-dashboard-grid .react-grid-item.react-grid-placeholder {
+  background: #3b82f6;
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+.shared-dashboard-grid .react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjOTk5IiBkPSJtNiAwaC02djZoNnoiLz4KPC9zdmc+');
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  cursor: se-resize;
+}
+
+/* Shared Dashboard Specific Styles */
+.shared-dashboard-grid {
+  background: #f9fafb;
+  min-height: calc(100vh - 140px);
+}
+
+.shared-dashboard-grid .widget-container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
-/* Tablet optimizations */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .shared-dashboard-grid {
-    padding: 0;
-    margin: 0;
-  }
-  
-  .shared-dashboard-grid .widget-container {
-    border-radius: 8px;
-  }
-  
-  .shared-dashboard-grid .widget-content {
-    padding: 6px;
-  }
+.shared-dashboard-grid .widget-container:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Mobile optimizations */
+/* Shared dashboard widget size optimizations */
+.shared-dashboard-grid .widget-content {
+  padding: 12px;
+  font-size: 0.9rem;
+  min-height: 200px;
+}
+
+.shared-dashboard-grid .widget-content h1,
+.shared-dashboard-grid .widget-content h2,
+.shared-dashboard-grid .widget-content h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.shared-dashboard-grid .widget-content p {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Widget type specific container sizing */
+.shared-dashboard-grid .widget-container[data-widget-type="chart"] {
+  min-height: 280px;
+  min-width: 280px;
+}
+
+.shared-dashboard-grid .widget-container[data-widget-type="map"] {
+  min-height: 300px;
+  min-width: 300px;
+}
+
+.shared-dashboard-grid .widget-container[data-widget-type="gauge"] {
+  min-height: 220px;
+  min-width: 220px;
+}
+
+.shared-dashboard-grid .widget-container[data-widget-type="toggle"] {
+  min-height: 200px;
+  min-width: 200px;
+}
+
+.shared-dashboard-grid .widget-container[data-widget-type="notification"] {
+  min-height: 250px;
+  min-width: 250px;
+}
+
+.shared-dashboard-grid .widget-container[data-widget-type="3d-model"] {
+  min-height: 300px;
+  min-width: 300px;
+}
+
+/* Mobile optimizations for shared dashboard */
 @media (max-width: 768px) {
   .shared-dashboard-grid {
-    padding: 0;
-    margin: 0;
+    padding: 8px;
   }
-  
+
   .shared-dashboard-grid .widget-container {
-    border-radius: 6px;
-    position: relative !important;
-    left: 0 !important;
-    width: 100% !important;
-    margin-bottom: 16px;
+    min-height: 180px;
+    min-width: 180px;
   }
-  
+
   .shared-dashboard-grid .widget-content {
-    padding: 4px;
+    padding: 10px;
+    font-size: 0.8rem;
+    min-height: 150px;
   }
-}
-
-/* Ensure proper widget visibility */
-.shared-dashboard-grid .widget-container {
-  opacity: 1;
-  visibility: visible;
-  display: block;
-  z-index: 1;
-}
-
-/* Fix any overflow issues */
-.shared-dashboard-grid {
-  min-height: 400px;
-  height: auto;
-}
-
-/* Responsive text sizing */
-@media (max-width: 768px) {
-  .shared-dashboard-grid .widget-content {
-    font-size: 14px;
-  }
-}
-
-/* Ensure widgets don't get cut off */
-.shared-dashboard-grid .widget-container {
-  box-sizing: border-box;
-}
-
-/* Fix any positioning issues */
-.shared-dashboard-grid .widget-container {
-  transform: translateZ(0); /* Force hardware acceleration */
 }

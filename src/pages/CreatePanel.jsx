@@ -29,6 +29,7 @@ function CreatePanel() {
   const [mqttConnected, setMqttConnected] = useState(false)
   const [shareableLink, setShareableLink] = useState('')
   const [sharePassword, setSharePassword] = useState('')
+  const [publishedDashboard, setPublishedDashboard] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isTopicIdCopied, setIsTopicIdCopied] = useState(false)
   
@@ -487,10 +488,12 @@ function CreatePanel() {
         // Set sharing data for modal
         setShareableLink(result.dashboard.shareableLink)
         setSharePassword(result.dashboard.sharePassword)
+        setPublishedDashboard(panelToPublish)
         
         console.log('About to show sharing modal...')
         console.log('shareableLink:', result.dashboard.shareableLink)
         console.log('sharePassword:', result.dashboard.sharePassword)
+        console.log('Published dashboard data:', panelToPublish)
         
         // Show sharing modal
         setShowSharingModal(true)
@@ -520,7 +523,7 @@ function CreatePanel() {
         const publishedData = {
           panelId: shareableId,
           widgets: panelToPublish.widgets || [],
-          layouts: panelToPublish.layouts || {}, // Fixed: was layout, should be layouts
+          layouts: panelToPublish.layouts || {},
           title: panelToPublish.name || 'Shared Dashboard',
           stats: { totalWidgets: (panelToPublish.widgets || []).length, gridUtilization: 0 },
           sharePassword: generatedPassword,
@@ -537,6 +540,7 @@ function CreatePanel() {
         // Set sharing data for modal
         setShareableLink(generatedLink)
         setSharePassword(generatedPassword)
+        setPublishedDashboard(panelToPublish)
         
         // Show sharing modal
         setShowSharingModal(true)
@@ -829,11 +833,10 @@ function CreatePanel() {
       )}
 
       {/* Publishing & Sharing Modal */}
-      {console.log('Rendering modal check - showSharingModal:', showSharingModal)}
-      {showSharingModal && (
+      {showSharingModal && publishedDashboard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 flex-shrink-0">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-semibold text-gray-900">Dashboard Published Successfully!</h3>
                 <button
@@ -845,7 +848,9 @@ function CreatePanel() {
                   </svg>
                 </button>
               </div>
+            </div>
               
+            <div className="px-6 flex-1 overflow-y-auto">
               <div className="space-y-6">
                 {/* Success Message */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -853,9 +858,10 @@ function CreatePanel() {
                     <svg className="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-green-800 font-medium">Your dashboard is now live and ready for sharing!</p>
+                    <p className="text-green-800 font-medium">Your dashboard "{publishedDashboard.name}" is now live and ready for sharing!</p>
                   </div>
                 </div>
+
 
                 {/* Shareable Link */}
                 <div>
@@ -902,9 +908,9 @@ function CreatePanel() {
                 </div>
 
                 {/* Sharing Instructions */}
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-red-900 mb-2">How to Share:</h4>
-                  <ol className="text-sm text-red-800 space-y-1 list-decimal list-inside">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">How to Share:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Share the link above with your team members</li>
                     <li>Provide them with the access password</li>
                     <li>Shared users can view and control the dashboard</li>
@@ -927,9 +933,11 @@ function CreatePanel() {
                   </div>
                 </div>
               </div>
+            </div>
               
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="p-6 flex-shrink-0 border-t border-gray-200 bg-white">
+              <div className="flex items-center justify-end space-x-3">
                 <button
                   onClick={() => setShowSharingModal(false)}
                   className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

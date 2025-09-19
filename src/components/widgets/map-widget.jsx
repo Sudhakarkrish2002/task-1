@@ -64,6 +64,32 @@ const MapUpdater = ({ devices }) => {
   return null
 }
 
+// Component to handle map resize for mobile responsiveness
+const MapResizer = () => {
+  const map = useMap()
+  
+  useEffect(() => {
+    // Force map to invalidate size after a short delay to ensure proper rendering
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+    }, 100)
+    
+    // Also invalidate size on window resize
+    const handleResize = () => {
+      map.invalidateSize()
+    }
+    
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [map])
+  
+  return null
+}
+
 export const MapWidget = ({ 
   widgetId,
   title = 'Device Map',
@@ -133,12 +159,22 @@ export const MapWidget = ({
         </div>
       </div>
       
-      <div className="flex-1 relative min-h-0 overflow-hidden" style={{ minHeight: '120px' }}>
+      <div className="flex-1 relative min-h-0 overflow-hidden map-widget-container" style={{ minHeight: '120px' }}>
         <MapContainer
           center={center}
           zoom={zoom}
-          style={{ width: '100%', height: '100%', borderRadius: '8px' }}
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            minHeight: '120px',
+            borderRadius: '8px',
+            zIndex: 1
+          }}
           scrollWheelZoom={false}
+          zoomControl={true}
+          doubleClickZoom={false}
+          dragging={true}
+          touchZoom={true}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -146,6 +182,7 @@ export const MapWidget = ({
           />
           
           <MapUpdater devices={safeDevices} />
+          <MapResizer />
           
           {safeDevices.map((device) => (
             <Marker

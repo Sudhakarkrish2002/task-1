@@ -248,7 +248,7 @@ export const ProfessionalGridManager = ({
       const sizes = {
         'gauge': { w: 3, h: 3 },
         'chart': { w: 4, h: 4 },
-        'toggle': { w: 2, h: 2 },
+        'toggle': { w: 3, h: 3 },
         'slider': { w: 3, h: 2 },
         'map': { w: 6, h: 5 },
         'notification': { w: 3, h: 4 },

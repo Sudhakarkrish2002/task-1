@@ -281,7 +281,7 @@ const ChatBot = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`fixed ${isMobile ? 'bottom-20 right-4' : 'bottom-6 right-6'} w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center z-50 group transform hover:scale-105 touch-target`}
+          className={`fixed ${isMobile ? 'bottom-6 left-4' : 'bottom-6 right-6'} w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center z-50 group transform hover:scale-105 touch-target`}
         >
           <MessageCircle className="w-7 h-7" />
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
@@ -298,7 +298,7 @@ const ChatBot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed ${isMobile ? 'bottom-20 right-4 left-4' : 'bottom-6 right-6'} ${isMobile ? 'w-auto' : 'w-96 sm:w-80 md:w-96'} bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-500 transform ${
+        <div className={`fixed ${isMobile ? 'bottom-6 left-4 right-4' : 'bottom-6 right-6'} ${isMobile ? 'w-auto' : 'w-96 sm:w-80 md:w-96'} bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-500 transform ${
           isMinimized ? 'h-16 scale-95' : isMobile ? 'h-[calc(100vh-2rem)] scale-100' : 'h-[600px] scale-100'
         }`}>
           {/* Header */}
