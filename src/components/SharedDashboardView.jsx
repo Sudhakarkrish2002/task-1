@@ -11,6 +11,7 @@ import { ToggleWidget } from './widgets/toggle-widget'
 import { SimpleSensorWidget } from './widgets/simple-sensor-widget'
 import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
+import './SharedDashboardView.css'
 
 /**
  * Shared Dashboard View Component
@@ -270,16 +271,16 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     return (
       <div className="min-h-screen bg-gray-50" style={{ height: 'auto' }}>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <div className="flex items-center space-x-2">
                 <Eye className="w-5 h-5 text-green-600" />
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {dashboardData.title}
                 </h1>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
                 <span>Widgets: {dashboardData.stats?.totalWidgets || 0}</span>
                 <span>•</span>
                 <span>Shared Dashboard</span>
@@ -296,113 +297,94 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
                 className="flex items-center space-x-2"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy Link'}</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Dashboard Content */}
-        <div className="p-6" style={{ paddingBottom: '20px' }}>
+        <div className="p-4 sm:p-6" style={{ paddingBottom: '20px' }}>
           {(() => {
-            console.log('🔍 Rendering EnhancedGridLayout with:')
+            console.log('🔍 Rendering Shared Dashboard with:')
             console.log('🔍 Widgets:', dashboardData.widgets || [])
-            console.log('🔍 Layouts:', dashboardData.layouts || {})
             console.log('🔍 Widget count:', (dashboardData.widgets || []).length)
-            console.log('🔍 Dashboard data:', dashboardData)
             
-            // Debug widget positions
-            const widgets = dashboardData.widgets || []
-            widgets.forEach((widget, index) => {
-              console.log(`🔍 Widget ${index + 1}:`, {
-                id: widget.i,
-                type: widget.type,
-                x: widget.x,
-                y: widget.y,
-                w: widget.w,
-                h: widget.h,
-                position: `(${widget.x}, ${widget.y})`,
-                size: `${widget.w}x${widget.h}`
-              })
-            })
+            // Process widgets for display
+            const rawWidgets = dashboardData.widgets || []
+            const processedWidgets = rawWidgets.map((widget, index) => ({
+              ...widget,
+              i: widget.i || widget.id || `widget-${index}`,
+              x: Math.max(0, widget.x || 0),
+              y: Math.max(0, widget.y || 0),
+              w: Math.max(1, widget.w || 3),
+              h: Math.max(1, widget.h || 2)
+            }))
             
-            // Find max Y position
-            const maxY = Math.max(...widgets.map(w => (w.y || 0) + (w.h || 1)))
-            console.log('🔍 Max Y position:', maxY)
-            console.log('🔍 Estimated grid height needed:', maxY * 80 + 100, 'px')
+            console.log('🔍 Processed widgets:', processedWidgets)
             
             return null
           })()}
-          <EnhancedGridLayout
-            key={`dashboard-${dashboardData.widgets?.length || 0}-${Date.now()}`}
-            widgets={(() => {
-              // Process and validate widgets to prevent overlaps
-              const rawWidgets = dashboardData.widgets || []
-              console.log('🔍 Raw widgets before processing:', rawWidgets)
+          
+          {/* Custom Grid Layout for Shared Dashboard */}
+          <div className="shared-dashboard-grid">
+            {(() => {
+              const widgets = dashboardData.widgets || []
+              const processedWidgets = widgets.map((widget, index) => ({
+                ...widget,
+                i: widget.i || widget.id || `widget-${index}`,
+                x: Math.max(0, widget.x || 0),
+                y: Math.max(0, widget.y || 0),
+                w: Math.max(1, widget.w || 3),
+                h: Math.max(1, widget.h || 2)
+              }))
               
-              // First, ensure all widgets have valid properties
-              const validatedWidgets = rawWidgets.map((widget, index) => {
-                const processedWidget = {
-                  ...widget,
-                  i: widget.i || widget.id || `widget-${index}`,
-                  x: Math.max(0, widget.x || 0),
-                  y: Math.max(0, widget.y || 0),
-                  w: Math.max(1, widget.w || 3),
-                  h: Math.max(1, widget.h || 2),
-                  minW: Math.max(1, Math.min(widget.minW || 1, (widget.w || 3) - 1)),
-                  minH: Math.max(1, Math.min(widget.minH || 1, (widget.h || 2) - 1)),
-                  maxW: Math.max(widget.w || 3, Math.min(12, widget.maxW || 12)),
-                  maxH: Math.max(widget.h || 2, Math.min(10, widget.maxH || 10))
-                }
-                
-                // Ensure minW is always less than w, and minH is always less than h
-                if (processedWidget.minW >= processedWidget.w) {
-                  processedWidget.minW = Math.max(1, processedWidget.w - 1)
-                }
-                if (processedWidget.minH >= processedWidget.h) {
-                  processedWidget.minH = Math.max(1, processedWidget.h - 1)
-                }
-                
-                return processedWidget
-              })
+              // Calculate grid dimensions
+              const maxY = Math.max(...processedWidgets.map(w => (w.y || 0) + (w.h || 1)), 0)
+              const gridHeight = Math.max(maxY * 96 + 100, 400) // 96px per row (80px + 16px margin)
               
-              console.log('🔍 Validated widgets:', validatedWidgets)
-              
-              // Auto-fix any overlaps by repositioning widgets
-              const fixedWidgets = autoFixOverlaps(validatedWidgets, 12)
-              
-              console.log('🔍 Fixed widgets after overlap resolution:', fixedWidgets)
-              
-              return fixedWidgets
+              return (
+                <div 
+                  className="relative w-full"
+                  style={{ 
+                    height: `${gridHeight}px`,
+                    minHeight: '400px'
+                  }}
+                >
+                  {processedWidgets.map((widget) => {
+                    const left = widget.x * 96 // 96px per column (80px + 16px margin)
+                    const top = widget.y * 96
+                    const width = widget.w * 96 - 16 // Subtract margin
+                    const height = widget.h * 96 - 16 // Subtract margin
+                    
+                    return (
+                      <div
+                        key={widget.i}
+                        className="widget-container"
+                        style={{
+                          left: `${left}px`,
+                          top: `${top}px`,
+                          width: `${width}px`,
+                          height: `${height}px`,
+                          zIndex: 1
+                        }}
+                      >
+                        <div className="widget-content">
+                          {renderWidget(widget)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
             })()}
-            layouts={dashboardData.layouts || {}}
-            overlaps={[]}
-            isValidating={false}
-            renderWidget={renderWidget}
-            isPreviewMode={true} // Always in preview mode for shared view
-            onLayoutChange={() => {}} // Disabled for shared view
-            onWidgetDelete={() => {}} // Disabled for shared view
-            onWidgetCopy={() => {}} // Disabled for shared view
-            onWidgetAdd={() => {}} // Disabled for shared view
-            onWidgetSettings={() => {}} // Disabled for shared view
-            showGridBackground={false}
-            showStatusBar={false}
-            enableAutoFix={true} // Enable auto-fix for shared view
-            className="w-full dashboard-view"
-            style={{ 
-              height: 'auto',
-              overflow: 'visible',
-              paddingBottom: '100px',
-              background: 'transparent',
-              minHeight: '600px'
-            }}
-          />
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t border-gray-200 px-6 py-2">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center space-x-4">
+        <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <span>Published: {new Date(dashboardData.publishedAt).toLocaleDateString()}</span>
               <span>•</span>
               <span>Panel ID: {dashboardData.panelId}</span>

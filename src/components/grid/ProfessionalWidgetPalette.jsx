@@ -16,6 +16,8 @@ import {
  */
 export const ProfessionalWidgetPalette = ({
   onWidgetClick,
+  isMobile = false,
+  isTablet = false,
   className = '',
   style = {}
 }) => {
@@ -92,30 +94,32 @@ export const ProfessionalWidgetPalette = ({
   }, [])
 
   return (
-    <div className={`professional-widget-palette ${className}`} style={style}>
-      {/* Header */}
-      <div className="palette-header">
-        <h3>Widgets</h3>
-        <p className="palette-subtitle">Click or drag widgets to your dashboard</p>
-      </div>
+    <div className={`professional-widget-palette ${isMobile ? 'mobile-palette' : isTablet ? 'tablet-palette' : 'desktop-palette'} ${className}`} style={style}>
+      {/* Header - Hidden on mobile, simplified on tablet */}
+      {!isMobile && (
+        <div className={`palette-header ${isTablet ? 'tablet-header' : ''}`}>
+          <h3>Widgets</h3>
+          {!isTablet && <p className="palette-subtitle">Click or drag widgets to your dashboard</p>}
+        </div>
+      )}
 
-      {/* Search */}
+      {/* Search - Simplified on mobile and tablet */}
       <div className="palette-search">
         <input
           type="text"
-          placeholder="Search widgets..."
+          placeholder={isMobile ? "Search..." : isTablet ? "Search..." : "Search widgets..."}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
+          className={`search-input ${isMobile ? 'mobile-search' : isTablet ? 'tablet-search' : ''}`}
         />
       </div>
 
-      {/* Categories */}
-      <div className="palette-categories">
+      {/* Categories - Horizontal scroll on mobile and tablet */}
+      <div className={`palette-categories ${isMobile ? 'mobile-categories' : isTablet ? 'tablet-categories' : ''}`}>
         {Object.entries(widgetCategories).map(([key, category]) => (
           <button
             key={key}
-            className={`category-btn ${selectedCategory === key ? 'active' : ''}`}
+            className={`category-btn ${selectedCategory === key ? 'active' : ''} ${isMobile ? 'mobile-category' : isTablet ? 'tablet-category' : ''}`}
             onClick={() => setSelectedCategory(key)}
           >
             {category.name}
@@ -123,26 +127,26 @@ export const ProfessionalWidgetPalette = ({
         ))}
       </div>
 
-      {/* Widgets Grid */}
-      <div className="widgets-grid">
+      {/* Widgets Grid - Responsive layout */}
+      <div className={`widgets-grid ${isMobile ? 'mobile-widgets-grid' : isTablet ? 'tablet-widgets-grid' : 'desktop-widgets-grid'}`}>
         {filteredWidgets.map((widget) => {
           const IconComponent = widget.icon
           return (
             <div
               key={widget.type}
-              className="widget-item"
-              draggable
-              onDragStart={(e) => handleDragStart(e, widget.type)}
-              onDragEnd={handleDragEnd}
+              className={`widget-item ${isMobile ? 'mobile-widget-item' : isTablet ? 'tablet-widget-item' : 'desktop-widget-item'}`}
+              draggable={!isMobile}
+              onDragStart={!isMobile ? (e) => handleDragStart(e, widget.type) : undefined}
+              onDragEnd={!isMobile ? handleDragEnd : undefined}
               onClick={() => handleWidgetClick(widget.type)}
               title={widget.description}
             >
               <div className="widget-icon">
-                <IconComponent size={24} />
+                <IconComponent size={isMobile ? 20 : isTablet ? 22 : 24} />
               </div>
               <div className="widget-info">
                 <span className="widget-name">{widget.name}</span>
-                <span className="widget-description">{widget.description}</span>
+                {!isMobile && !isTablet && <span className="widget-description">{widget.description}</span>}
               </div>
             </div>
           )
@@ -154,7 +158,7 @@ export const ProfessionalWidgetPalette = ({
         <div className="palette-empty">
           <div className="empty-icon">🔍</div>
           <p>No widgets found</p>
-          <span>Try adjusting your search or category</span>
+          {!isMobile && !isTablet && <span>Try adjusting your search or category</span>}
         </div>
       )}
     </div>

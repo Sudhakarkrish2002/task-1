@@ -19,6 +19,23 @@ import {
   CheckCircle
 } from 'lucide-react'
 
+// Mobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
+  
+  return isMobile
+}
+
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -27,6 +44,7 @@ const ChatBot = () => {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  const isMobile = useIsMobile()
 
   // Enhanced default questions with more variety
   const defaultQuestions = [
@@ -263,23 +281,25 @@ const ChatBot = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center z-50 group transform hover:scale-105"
+          className={`fixed ${isMobile ? 'bottom-20 right-4' : 'bottom-6 right-6'} w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center z-50 group transform hover:scale-105 touch-target`}
         >
           <MessageCircle className="w-7 h-7" />
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
           </div>
-          <div className="absolute right-20 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 shadow-lg">
-            <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-            Need help? Chat with us!
-          </div>
+          {!isMobile && (
+            <div className="absolute right-20 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 shadow-lg">
+              <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+              Need help? Chat with us!
+            </div>
+          )}
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-6 right-6 w-96 sm:w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-500 transform ${
-          isMinimized ? 'h-16 scale-95' : 'h-[600px] scale-100'
+        <div className={`fixed ${isMobile ? 'bottom-20 right-4 left-4' : 'bottom-6 right-6'} ${isMobile ? 'w-auto' : 'w-96 sm:w-80 md:w-96'} bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-500 transform ${
+          isMinimized ? 'h-16 scale-95' : isMobile ? 'h-[calc(100vh-2rem)] scale-100' : 'h-[600px] scale-100'
         }`}>
           {/* Header */}
           <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-t-2xl flex items-center justify-between backdrop-blur-sm">
@@ -314,7 +334,7 @@ const ChatBot = () => {
           {!isMinimized && (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 h-[300px] sm:h-[400px] bg-gradient-to-b from-gray-50 to-white chatbot-messages">
+              <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isMobile ? 'h-[calc(100vh-200px)]' : 'h-[300px] sm:h-[400px]'} bg-gradient-to-b from-gray-50 to-white chatbot-messages`}>
                 {messages.map((message) => (
                   <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                     <div className={`flex space-x-3 max-w-[85%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -411,7 +431,7 @@ const ChatBot = () => {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm bg-gray-50 focus:bg-white transition-all duration-200"
+                    className={`flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${isMobile ? 'text-base' : 'text-sm'} bg-gray-50 focus:bg-white transition-all duration-200`}
                     disabled={isTyping}
                   />
                   <button

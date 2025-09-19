@@ -240,40 +240,199 @@
   border-radius: 2px;
 }
 
+/* Tablet Palette Styles */
+.tablet-palette {
+  background: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  max-width: 280px !important;
+}
+
+.tablet-header {
+  padding: 16px !important;
+}
+
+.tablet-header h3 {
+  font-size: 16px !important;
+  margin-bottom: 0 !important;
+}
+
+.tablet-search {
+  font-size: 14px !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+}
+
+.tablet-categories {
+  padding: 12px 16px !important;
+  gap: 6px !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.tablet-category {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: 16px !important;
+  min-width: auto !important;
+  white-space: nowrap !important;
+}
+
+.tablet-widgets-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  padding: 12px 16px !important;
+}
+
+.tablet-widget-item {
+  flex-direction: row !important;
+  text-align: left !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  min-height: auto !important;
+  touch-action: manipulation !important;
+}
+
+.tablet-widget-item .widget-icon {
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 10px 0 0 !important;
+  border-radius: 6px !important;
+}
+
+.tablet-widget-item .widget-info {
+  align-items: flex-start !important;
+}
+
+.tablet-widget-item .widget-name {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Mobile Palette Styles */
+.mobile-palette {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.mobile-palette .palette-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mobile-search {
+  font-size: 16px !important; /* Prevents zoom on iOS */
+  padding: 12px 16px !important;
+  border-radius: 12px !important;
+}
+
+.mobile-categories {
+  padding: 12px 16px !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.mobile-category {
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  border-radius: 24px !important;
+  min-width: auto !important;
+  white-space: nowrap !important;
+}
+
+.mobile-widgets-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px !important;
+  padding: 16px !important;
+}
+
+.mobile-widget-item {
+  flex-direction: column !important;
+  text-align: center !important;
+  padding: 16px 12px !important;
+  border-radius: 12px !important;
+  min-height: 100px !important;
+  touch-action: manipulation !important;
+}
+
+.mobile-widget-item .widget-icon {
+  width: 48px !important;
+  height: 48px !important;
+  margin: 0 0 8px 0 !important;
+  border-radius: 12px !important;
+}
+
+.mobile-widget-item .widget-info {
+  align-items: center !important;
+}
+
+.mobile-widget-item .widget-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin-bottom: 0 !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
-  .palette-header {
+  .desktop-palette .palette-header {
     padding: 16px;
   }
   
-  .palette-search {
+  .desktop-palette .palette-search {
     padding: 12px 16px;
   }
   
-  .palette-categories {
+  .desktop-palette .palette-categories {
     padding: 12px 16px;
   }
   
-  .widgets-grid {
+  .desktop-palette .widgets-grid {
     padding: 12px 16px;
   }
   
-  .widget-item {
+  .desktop-palette .widget-item {
     padding: 10px;
   }
   
-  .widget-icon {
+  .desktop-palette .widget-icon {
     width: 36px;
     height: 36px;
     margin-right: 10px;
   }
   
-  .widget-name {
+  .desktop-palette .widget-name {
     font-size: 13px;
   }
   
-  .widget-description {
+  .desktop-palette .widget-description {
     font-size: 11px;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .mobile-widgets-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  
+  .mobile-widget-item {
+    min-height: 80px !important;
+    padding: 12px 8px !important;
+  }
+  
+  .mobile-widget-item .widget-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .mobile-widget-item .widget-name {
+    font-size: 13px !important;
   }
 }
 

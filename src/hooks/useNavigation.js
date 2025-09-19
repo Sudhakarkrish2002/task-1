@@ -1,34 +1,23 @@
 import { useNavigate } from 'react-router-dom'
 import { startTransition } from 'react'
+import { useNavigationWithScroll } from './useScrollToTop'
 
 export const useNavigation = () => {
   const navigate = useNavigate()
+  const { navigateWithScrollToTop } = useNavigationWithScroll()
 
-  const navigateWithScrollToTop = (path, options = {}) => {
+  const handleNavigation = (path, options = {}) => {
     startTransition(() => {
-      navigate(path, options)
+      navigateWithScrollToTop(navigate, path, options)
     })
-    
-    // Ensure scroll to top happens after navigation
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: 'smooth'
-      })
-    }, 100)
   }
 
   const handleFooterLinkClick = (path) => {
-    navigateWithScrollToTop(path)
-  }
-
-  const handleNavigation = (path) => {
-    navigateWithScrollToTop(path)
+    handleNavigation(path)
   }
 
   return {
-    navigate: navigateWithScrollToTop,
+    navigate: handleNavigation,
     handleFooterLinkClick,
     handleNavigation
   }

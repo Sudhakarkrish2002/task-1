@@ -310,7 +310,7 @@ export const ProfessionalGrid = ({
             <div className="empty-content">
               <div className="empty-icon">📊</div>
               <h3>No widgets yet</h3>
-              <p>Drag widgets from the palette to start building your dashboard</p>
+              <p>Click the + button to add widgets to your dashboard</p>
             </div>
           </div>
         )}

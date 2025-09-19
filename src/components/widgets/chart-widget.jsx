@@ -1,5 +1,22 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAutoValue } from '../../hooks/useAutoValue'
+
+// Mobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
+  
+  return isMobile
+}
 
 export const ChartWidget = ({ 
   widgetId,
@@ -17,6 +34,7 @@ export const ChartWidget = ({
     autoGenerate
   )
   const canvasRef = useRef(null)
+  const isMobile = useIsMobile()
 
   // Validate data
   const safeData = Array.isArray(data) && data.length > 0 ? data : [10, 20, 30, 40, 50, 60, 70, 80]
@@ -36,7 +54,7 @@ export const ChartWidget = ({
 
     const width = rect.width
     const height = rect.height
-    const padding = 20
+    const padding = isMobile ? 12 : 20
     const chartWidth = width - (padding * 2)
     const chartHeight = height - (padding * 2)
 
@@ -66,9 +84,9 @@ export const ChartWidget = ({
       ctx.fillRect(x + 2, y, barWidth - 4, barHeight)
 
       // Value text
-      if (barHeight > 15) {
+      if (barHeight > (isMobile ? 20 : 15)) {
         ctx.fillStyle = '#ffffff'
-        ctx.font = '10px Inter, sans-serif'
+        ctx.font = `${isMobile ? '12px' : '10px'} Inter, sans-serif`
         ctx.textAlign = 'center'
         ctx.fillText(value.toString(), x + barWidth / 2, y + barHeight / 2 + 3)
       }
@@ -89,30 +107,30 @@ export const ChartWidget = ({
   return (
     <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+      <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} bg-gradient-to-r from-gray-50 to-white border-b border-gray-100`}>
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <h3 className="text-sm font-bold text-gray-800 truncate">{title}</h3>
+          <h3 className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-gray-800 truncate`}>{title}</h3>
         </div>
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className={`text-xs font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
+          <span className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
             {connected ? 'Live' : 'Offline'}
           </span>
         </div>
       </div>
       
       {/* Chart */}
-      <div className="flex-1 p-4 bg-gradient-to-b from-white to-gray-50">
+      <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'} bg-gradient-to-b from-white to-gray-50`}>
         <div className="relative h-full">
           <canvas
             ref={canvasRef}
             className="w-full h-full drop-shadow-sm"
-            style={{ minHeight: '140px' }}
+            style={{ minHeight: isMobile ? '120px' : '140px' }}
           />
           {/* Chart overlay info */}
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1">
-            <div className="text-xs font-medium text-gray-600">
+          <div className={`absolute ${isMobile ? 'top-1 right-1' : 'top-2 right-2'} bg-white/90 backdrop-blur-sm rounded-lg ${isMobile ? 'px-1 py-0.5' : 'px-2 py-1'}`}>
+            <div className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-600`}>
               {validData.length} data points
             </div>
           </div>
@@ -120,26 +138,26 @@ export const ChartWidget = ({
       </div>
       
       {/* Footer */}
-      <div className="px-4 pb-4 bg-gradient-to-r from-gray-50 to-white">
+      <div className={`${isMobile ? 'px-3 pb-3' : 'px-4 pb-4'} bg-gradient-to-r from-gray-50 to-white`}>
         <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-600 font-medium">
+          <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-600 font-medium truncate`}>
             {deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
           </div>
           <div className="flex items-center space-x-2">
-            <div className="text-xs text-gray-500">
+            <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
               Max: {validData.length > 0 ? Math.max(...validData) : 0}
             </div>
             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
           </div>
         </div>
         {/* Chart type indicator */}
-        <div className="mt-2 flex items-center justify-between">
-          <div className="text-xs text-gray-500">
+        <div className={`${isMobile ? 'mt-1' : 'mt-2'} flex items-center justify-between`}>
+          <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
             {chartType.toUpperCase()} CHART
           </div>
           <div className="flex space-x-1">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-1 h-3 bg-blue-500 rounded-full opacity-60"></div>
+              <div key={i} className={`${isMobile ? 'w-0.5 h-2' : 'w-1 h-3'} bg-blue-500 rounded-full opacity-60`}></div>
             ))}
           </div>
         </div>

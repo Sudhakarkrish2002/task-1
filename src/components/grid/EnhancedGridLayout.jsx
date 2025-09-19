@@ -535,32 +535,32 @@ export const EnhancedGridLayout = ({
                 
                 {/* Widget Control Buttons - Show on hover or when selected, but not in dashboard view */}
                 {!isPreviewMode && !isDashboardView && (
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
+                  <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
                     {onWidgetSettings && (
                       <button
                         onClick={(e) => onWidgetSettings(widget, e)}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200 shadow-sm cursor-pointer"
+                        className="p-2 sm:p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200 shadow-sm cursor-pointer w-9 h-9 sm:w-auto sm:h-auto"
                         title="Widget Settings"
                       >
-                        <Settings className="w-3 h-3" />
+                        <Settings className="w-4 h-4 sm:w-3 sm:h-3" />
                       </button>
                     )}
                     <button
                       onClick={(e) => handleWidgetCopy(widget.i, e)}
                       onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm cursor-pointer"
+                      className="p-2 sm:p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 shadow-sm cursor-pointer w-9 h-9 sm:w-auto sm:h-auto"
                       title="Copy widget"
                     >
-                      <Copy className="w-3 h-3" />
+                      <Copy className="w-4 h-4 sm:w-3 sm:h-3" />
                     </button>
                     <button
                       onClick={(e) => handleWidgetDelete(widget.i, e)}
                       onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm cursor-pointer"
+                      className="p-2 sm:p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm cursor-pointer w-9 h-9 sm:w-auto sm:h-auto"
                       title="Delete widget"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4 sm:w-3 sm:h-3" />
                     </button>
                   </div>
                 )}

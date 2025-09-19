@@ -297,13 +297,28 @@
   }
   
   .widget-controls {
-    top: 4px;
-    right: 4px;
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+    opacity: 1; /* Always show on mobile for better UX */
   }
   
   .control-btn {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure proper touch targets */
+  .control-btn:hover {
+    transform: none; /* Disable hover effects on mobile */
+  }
+  
+  /* Make sure controls are always visible on mobile */
+  .grid-widget .widget-controls {
+    opacity: 1;
   }
 }
 

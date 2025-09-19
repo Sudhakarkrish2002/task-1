@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, useEffect, startTransition } from 'react'
-import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom'
 import { 
   User,
   Home,
@@ -12,7 +12,10 @@ import {
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import ChatBot from './components/ChatBot'
+import ScrollToTopButton from './components/ScrollToTopButton'
 import { useNavigation } from './hooks/useNavigation'
+import { useMobilePerformance } from './hooks/useMobile'
+import { useScrollToTop } from './hooks/useScrollToTop'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
 import mqttService from './services/mqttService'
@@ -30,6 +33,7 @@ const SharedDashboardView = lazy(() => import('./components/SharedDashboardView'
 // Feature pages
 const Features = lazy(() => import('./pages/Features'))
 const Contact = lazy(() => import('./pages/Contact'))
+
 
 // Shared Dashboard Route Component
 function SharedDashboardRoute() {
@@ -51,6 +55,12 @@ function AppContent() {
   const [mqttStatus, setMqttStatus] = useState('disconnected')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  
+  // Mobile performance optimizations
+  useMobilePerformance()
+  
+  // Enhanced scroll to top functionality
+  useScrollToTop()
 
 
   // Close dropdowns when clicking outside
@@ -67,14 +77,6 @@ function AppContent() {
     }
   }, [isUserMenuOpen])
 
-  // Scroll to top when route changes
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'smooth'
-    })
-  }, [location.pathname])
 
   // Initialize MQTT connection
   useEffect(() => {
@@ -284,6 +286,8 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/shared/:panelId" element={<SharedDashboardRoute />} />
+            {/* Redirect old scroll-test route to home */}
+            <Route path="/scroll-test" element={<Navigate to="/home" replace />} />
           </Routes>
           </Suspense>
         </ErrorBoundary>
@@ -291,6 +295,9 @@ function AppContent() {
 
       {/* Global ChatBot */}
       <ChatBot />
+      
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
     </div>
   )
 }

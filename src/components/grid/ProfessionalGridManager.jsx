@@ -11,6 +11,35 @@ import { NotificationWidget } from '../widgets/notification-widget'
 import { SimpleSensorWidget } from '../widgets/simple-sensor-widget'
 import { Model3DWidget } from '../widgets/model3d-widget'
 
+// Mobile and tablet detection hook
+const useDeviceType = () => {
+  const [deviceType, setDeviceType] = useState('desktop')
+  
+  useEffect(() => {
+    const checkDeviceType = () => {
+      const width = window.innerWidth
+      if (width <= 768) {
+        setDeviceType('mobile')
+      } else if (width <= 1024) {
+        setDeviceType('tablet')
+      } else {
+        setDeviceType('desktop')
+      }
+    }
+    
+    checkDeviceType()
+    window.addEventListener('resize', checkDeviceType)
+    return () => window.removeEventListener('resize', checkDeviceType)
+  }, [])
+  
+  return {
+    isMobile: deviceType === 'mobile',
+    isTablet: deviceType === 'tablet',
+    isDesktop: deviceType === 'desktop',
+    deviceType
+  }
+}
+
 /**
  * Professional Grid Manager
  * Main component that manages the professional grid system
@@ -26,6 +55,13 @@ export const ProfessionalGridManager = ({
   const [selectedWidget, setSelectedWidget] = useState(null)
   const [showWidgetSettings, setShowWidgetSettings] = useState(false)
   const [widgetSettings, setWidgetSettings] = useState(null)
+  const [showMobilePalette, setShowMobilePalette] = useState(false)
+  const { isMobile, isTablet, isDesktop, deviceType } = useDeviceType()
+  
+  // Debug mobile detection
+  useEffect(() => {
+    console.log('Device type detected:', deviceType, 'isMobile:', isMobile, 'window width:', window.innerWidth)
+  }, [deviceType, isMobile])
 
   // Get widget renderer - MUST be defined before any useEffect that uses it
   const getWidgetRenderer = useCallback((widgetType) => {
@@ -179,20 +215,49 @@ export const ProfessionalGridManager = ({
     setWidgets(widgetsWithRender)
   }, [initialWidgets, getWidgetRenderer])
 
-  // Widget size configuration
+  // Widget size configuration - responsive
   const getWidgetSize = useCallback((widgetType) => {
-    const sizes = {
-      'gauge': { w: 3, h: 3 },
-      'chart': { w: 4, h: 4 },
-      'toggle': { w: 2, h: 2 },
-      'slider': { w: 3, h: 2 },
-      'map': { w: 6, h: 5 },
-      'notification': { w: 3, h: 4 },
-      'sensor-tile': { w: 3, h: 3 },
-      '3d-model': { w: 4, h: 5 }
+    if (isMobile) {
+      // Mobile-optimized sizes (full width for most widgets)
+      const mobileSizes = {
+        'gauge': { w: 12, h: 3 },
+        'chart': { w: 12, h: 4 },
+        'toggle': { w: 6, h: 2 },
+        'slider': { w: 12, h: 2 },
+        'map': { w: 12, h: 5 },
+        'notification': { w: 12, h: 4 },
+        'sensor-tile': { w: 6, h: 3 },
+        '3d-model': { w: 12, h: 5 }
+      }
+      return mobileSizes[widgetType] || { w: 12, h: 3 }
+    } else if (isTablet) {
+      // Tablet-optimized sizes (medium sizes)
+      const tabletSizes = {
+        'gauge': { w: 4, h: 3 },
+        'chart': { w: 6, h: 4 },
+        'toggle': { w: 3, h: 2 },
+        'slider': { w: 4, h: 2 },
+        'map': { w: 8, h: 5 },
+        'notification': { w: 4, h: 4 },
+        'sensor-tile': { w: 4, h: 3 },
+        '3d-model': { w: 6, h: 5 }
+      }
+      return tabletSizes[widgetType] || { w: 4, h: 3 }
+    } else {
+      // Desktop sizes
+      const sizes = {
+        'gauge': { w: 3, h: 3 },
+        'chart': { w: 4, h: 4 },
+        'toggle': { w: 2, h: 2 },
+        'slider': { w: 3, h: 2 },
+        'map': { w: 6, h: 5 },
+        'notification': { w: 3, h: 4 },
+        'sensor-tile': { w: 3, h: 3 },
+        '3d-model': { w: 4, h: 5 }
+      }
+      return sizes[widgetType] || { w: 3, h: 3 }
     }
-    return sizes[widgetType] || { w: 3, h: 3 }
-  }, [])
+  }, [isMobile, isTablet])
 
   // Find next available position
   const findAvailablePosition = useCallback((w, h) => {
@@ -336,18 +401,100 @@ export const ProfessionalGridManager = ({
 
   return (
     <div className={`professional-grid-manager ${className}`} style={style}>
-      <div className="grid-manager-layout">
+      <div className={`grid-manager-layout ${isMobile ? 'mobile-layout' : isTablet ? 'tablet-layout' : 'desktop-layout'}`}>
         {/* Widget Palette */}
         {!isPreviewMode && (
-          <div className="palette-container">
-            <ProfessionalWidgetPalette
-              onWidgetClick={handleWidgetAdd}
-            />
-          </div>
+          <>
+            {/* Desktop & Tablet Palette */}
+            {!isMobile && (
+              <div className={`palette-container ${isTablet ? 'tablet-palette' : 'desktop-palette'}`}>
+                <ProfessionalWidgetPalette
+                  onWidgetClick={handleWidgetAdd}
+                  isTablet={isTablet}
+                />
+              </div>
+            )}
+            
+            {/* Mobile Palette */}
+            {isMobile && (
+              <>
+                {/* Mobile Palette Toggle Button */}
+                <button
+                  onClick={() => {
+                    console.log('Mobile add button clicked, current state:', showMobilePalette)
+                    setShowMobilePalette(!showMobilePalette)
+                  }}
+                  className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-5 rounded-full shadow-2xl transition-all duration-200 touch-target border-2 border-white"
+                  aria-label="Add widget"
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </button>
+                
+                {/* Mobile Palette Overlay */}
+                {showMobilePalette && (
+                  <div 
+                    className="fixed inset-0 bg-black bg-opacity-60 z-50" 
+                    onClick={() => {
+                      console.log('Closing mobile palette')
+                      setShowMobilePalette(false)
+                    }}
+                  >
+                    <div 
+                      className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] overflow-hidden animate-slide-up" 
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Handle bar */}
+                      <div className="flex justify-center pt-3 pb-2">
+                        <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+                      </div>
+                      
+                      <div className="px-6 py-4 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-bold text-gray-900">Add Widget</h3>
+                          <button
+                            onClick={() => {
+                              console.log('Closing mobile palette via X button')
+                              setShowMobilePalette(false)
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors touch-target rounded-full hover:bg-gray-100"
+                          >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">Choose a widget to add to your dashboard</p>
+                      </div>
+                      
+                      <div className="p-4 overflow-y-auto max-h-[calc(80vh-120px)]">
+                        <ProfessionalWidgetPalette
+                          onWidgetClick={(widgetType) => {
+                            console.log('Widget clicked:', widgetType)
+                            handleWidgetAdd(widgetType)
+                            setShowMobilePalette(false)
+                          }}
+                          isMobile={true}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
         {/* Main Grid */}
-        <div className="grid-container">
+        <div className={`grid-container ${isMobile ? 'mobile-grid' : isTablet ? 'tablet-grid' : 'desktop-grid'}`}>
           <ProfessionalGrid
             widgets={widgets}
             onWidgetAdd={handleWidgetAdd}
@@ -356,8 +503,26 @@ export const ProfessionalGridManager = ({
             onWidgetUpdate={handleWidgetUpdate}
             onWidgetSettings={handleWidgetSettings}
             isPreviewMode={isPreviewMode}
+            isMobile={isMobile}
+            isTablet={isTablet}
           />
         </div>
+        
+        {/* Fallback Mobile Add Button - Always visible on small screens */}
+        {!isPreviewMode && (
+          <button
+            onClick={() => {
+              console.log('Fallback mobile add button clicked')
+              setShowMobilePalette(!showMobilePalette)
+            }}
+            className="mobile-add-button md:hidden"
+            aria-label="Add widget"
+          >
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Enhanced Widget Settings Modal */}
