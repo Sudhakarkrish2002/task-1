@@ -60,18 +60,14 @@ function HomePage() {
   }
 
 
-  // Simulate real-time stats
+  // Static stats - will be replaced with real-time data
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        devicesConnected: prev.devicesConnected + Math.floor(Math.random() * 3),
-        dataPointsProcessed: prev.dataPointsProcessed + Math.floor(Math.random() * 100),
-        activeUsers: prev.activeUsers + Math.floor(Math.random() * 2),
-        uptime: '99.9%'
-      }))
-    }, 2000)
-
-    return () => clearInterval(interval)
+    setStats({
+      devicesConnected: 0,
+      dataPointsProcessed: 0,
+      activeUsers: 0,
+      uptime: '99.9%'
+    })
   }, [])
 
 

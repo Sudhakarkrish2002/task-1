@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useAutoValue } from '../../hooks/useAutoValue'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -24,15 +25,26 @@ export const ChartWidget = ({
   chartType = 'bar',
   color = '#ef4444',
   panelId = 'default',
-  autoGenerate = true
+  autoGenerate = true,
+  // Optional MQTT wiring
+  topic,
+  valuePath
 }) => {
-  const { value: data, connected, deviceInfo } = useAutoValue(
+  const { value: autoData, connected: autoConnected, deviceInfo } = useAutoValue(
     widgetId, 
     'chart', 
     { chartType }, 
     panelId, 
     autoGenerate
   )
+  const { value: liveValue, history: liveHistory, connected: mqttConnected } = useMqttTopic(topic, { valuePath, historySize: 40 })
+  const connected = autoConnected || mqttConnected
+  // Prefer MQTT values when available; otherwise fall back to auto-generated
+  const data = useMemo(() => {
+    if (liveHistory && liveHistory.length > 0) return liveHistory
+    if (typeof liveValue === 'number') return [liveValue]
+    return autoData
+  }, [liveHistory, liveValue, autoData])
   const canvasRef = useRef(null)
   const isMobile = useIsMobile()
 

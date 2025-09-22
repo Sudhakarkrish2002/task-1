@@ -1,23 +1,50 @@
-import React from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Bell, AlertTriangle, CheckCircle, Info, X, Eye } from 'lucide-react'
-import { useAutoValue } from '../../hooks/useAutoValue'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
 
 export const NotificationWidget = ({ 
   widgetId,
   title = 'Notifications',
   panelId = 'default',
-  autoGenerate = true
+  notifications = [],
+  connected = false,
+  deviceInfo = null,
+  setNotifications = () => {},
+  // Optional MQTT wiring
+  topic,
+  titlePath = 'title',
+  messagePath = 'message',
+  typePath = 'type'
 }) => {
-  const { value: notifications, connected, setValue: setNotifications, deviceInfo } = useAutoValue(
-    widgetId, 
-    'notification', 
-    {}, 
-    panelId, 
-    autoGenerate
-  )
 
   // Ensure notifications is always an array
   const safeNotifications = Array.isArray(notifications) ? notifications : []
+
+  // Subscribe to notification topic; push new entries when a message arrives
+  const { lastMessage, connected: mqttConnected } = useMqttTopic(topic, { enabled: !!topic })
+  const effectiveConnected = connected || mqttConnected
+  useEffect(() => {
+    if (!topic || !lastMessage) return
+    const extract = (obj, path) => {
+      if (!path) return undefined
+      try {
+        return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj)
+      } catch (_) { return undefined }
+    }
+    const n = {
+      id: Date.now() + Math.random(),
+      title: extract(lastMessage, titlePath) || title,
+      message: extract(lastMessage, messagePath) || (typeof lastMessage === 'string' ? lastMessage : JSON.stringify(lastMessage)),
+      type: extract(lastMessage, typePath) || 'info',
+      read: false,
+      timestamp: new Date().toISOString(),
+    }
+    setNotifications((prev) => {
+      const arr = Array.isArray(prev) ? prev : []
+      return [n, ...arr].slice(0, 100)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastMessage])
 
 
   const getIcon = (type) => {
@@ -83,8 +110,8 @@ export const NotificationWidget = ({
           )}
         </div>
         <div className="flex items-center space-x-1">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500">{connected ? 'Live' : 'Offline'}</span>
+          <div className={`w-2 h-2 rounded-full ${effectiveConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-gray-500">{effectiveConnected ? 'Live' : 'Offline'}</span>
         </div>
       </div>
       

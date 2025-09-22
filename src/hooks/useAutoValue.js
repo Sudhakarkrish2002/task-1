@@ -3,6 +3,8 @@ import autoValueService from '../services/autoValueService'
 
 /**
  * Custom hook for professional auto-generated values
+ * NOTE: This is ONLY used by chart widgets for demo purposes
+ * All other widgets should use real-time data connections
  * @param {string} widgetId - Unique widget identifier
  * @param {string} widgetType - Type of widget (gauge, chart, toggle, etc.)
  * @param {Object} config - Widget configuration
@@ -17,17 +19,22 @@ export const useAutoValue = (widgetId, widgetType, config = {}, panelId = 'defau
   const isSubscribed = useRef(false)
 
   useEffect(() => {
+    console.log('🔍 useAutoValue: Effect triggered', { widgetId, widgetType, enabled, panelId })
+    
     if (!enabled || !widgetId || !widgetType) {
+      console.log('🔍 useAutoValue: Not subscribing - enabled:', enabled, 'widgetId:', widgetId, 'widgetType:', widgetType)
       setConnected(false)
       return
     }
 
     // Subscribe to auto-generated values
     const handleValueUpdate = (newValue, isConnected) => {
+      console.log('🔍 useAutoValue: Value update received', { widgetId, newValue, isConnected })
       setValue(newValue)
       setConnected(isConnected)
     }
 
+    console.log('🔍 useAutoValue: Subscribing to autoValueService')
     autoValueService.subscribe(widgetId, widgetType, config, panelId, handleValueUpdate)
     isSubscribed.current = true
 
@@ -40,6 +47,7 @@ export const useAutoValue = (widgetId, widgetType, config = {}, panelId = 'defau
     // Cleanup on unmount
     return () => {
       if (isSubscribed.current) {
+        console.log('🔍 useAutoValue: Unsubscribing', widgetId)
         autoValueService.unsubscribe(widgetId)
         isSubscribed.current = false
       }

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useAutoValue } from '../../hooks/useAutoValue'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -98,18 +98,29 @@ export const MapWidget = ({
   size = 'medium',
   mqttTopic = null,
   panelId = 'default',
-  autoGenerate = true
+  devices = [],
+  connected = false,
+  deviceInfo = null
 }) => {
-  const { value: devices, connected, deviceInfo } = useAutoValue(
-    widgetId, 
-    'map', 
-    { center, zoom }, 
-    panelId, 
-    autoGenerate
-  )
 
   // Ensure devices is always an array
-  const safeDevices = Array.isArray(devices) ? devices : []
+  const safeDevicesProp = Array.isArray(devices) ? devices : []
+
+  // Optional MQTT ingestion: expect messages with device list or single device update
+  const { lastMessage, connected: mqttConnected } = useMqttTopic(mqttTopic, { enabled: !!mqttTopic })
+  const effectiveConnected = connected || mqttConnected
+  const safeDevices = useMemo(() => {
+    if (!mqttTopic || !lastMessage) return safeDevicesProp
+    // If payload is a list, take it; otherwise try to merge a single device
+    if (Array.isArray(lastMessage)) return lastMessage
+    if (typeof lastMessage === 'object') {
+      const update = lastMessage
+      const byId = new Map(safeDevicesProp.map(d => [d.id, d]))
+      if (update.id) byId.set(update.id, { ...byId.get(update.id), ...update })
+      return Array.from(byId.values())
+    }
+    return safeDevicesProp
+  }, [mqttTopic, lastMessage, safeDevicesProp])
 
   // Size configurations
   const sizeConfig = {
@@ -121,32 +132,6 @@ export const MapWidget = ({
   const { width, height } = sizeConfig[size] || sizeConfig.medium
 
 
-  // Subscribe to MQTT topic for device updates
-  useEffect(() => {
-    if (!mqttTopic) return
-
-    const handleMqttMessage = (topic, messageData) => {
-      if (topic === mqttTopic) {
-        // Update device data based on MQTT message
-        setDevices(prevDevices => 
-          prevDevices.map(device => {
-            if (device.id === messageData.deviceId) {
-              return {
-                ...device,
-                data: { ...device.data, ...messageData },
-                status: messageData.status || device.status,
-                lastUpdate: new Date().toISOString()
-              }
-            }
-            return device
-          })
-        )
-      }
-    }
-
-    return () => {
-    }
-  }, [mqttTopic])
 
 
   return (
@@ -154,8 +139,8 @@ export const MapWidget = ({
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
         <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-500">Live</span>
+          <div className={`w-2 h-2 rounded-full ${effectiveConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-gray-500">{effectiveConnected ? 'Live' : 'Offline'}</span>
         </div>
       </div>
       

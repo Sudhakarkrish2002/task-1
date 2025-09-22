@@ -1,6 +1,8 @@
 // User Management Service
 // EmailService no longer needed - using backend API
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 class UserService {
   static USERS_KEY = 'iot_dashboard_users'
   static CURRENT_USER_KEY = 'iot_dashboard_current_user'
@@ -239,7 +241,7 @@ class UserService {
   // Request password reset - now uses real backend API
   static async requestPasswordReset(email) {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/request-reset', {
+      const response = await fetch(`${API_BASE_URL}/auth/request-reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,7 +277,7 @@ class UserService {
   // Reset password with token - now uses real backend API
   static async resetPasswordWithToken(token, email, newPassword) {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -299,7 +301,7 @@ class UserService {
   // Validate reset token - now uses real backend API
   static async validateResetToken(token, email) {
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/validate-reset-token?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/validate-reset-token?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

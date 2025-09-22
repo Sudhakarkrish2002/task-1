@@ -12,6 +12,7 @@ import { SimpleSensorWidget } from './widgets/simple-sensor-widget'
 import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
 import sharingService from '../services/sharingService'
+import dashboardService from '../services/dashboardService'
 import './SharedDashboardView.css'
 
 // Device detection hook for responsive behavior
@@ -64,24 +65,21 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         
         // Try to get from backend API first
         try {
-          const response = await fetch(`/api/dashboard/shared/${panelId}`)
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success) {
-              console.log('🔍 SharedDashboardView - Loaded data from backend:', result.dashboard)
-              console.log('🔍 Widgets count:', result.dashboard.widgets?.length || 0)
-              console.log('🔍 Layouts:', result.dashboard.layouts)
-              console.log('🔍 Widgets data:', result.dashboard.widgets)
-              
-              // Normalize the data structure
-              const normalizedData = {
-                ...result.dashboard,
-                layouts: result.dashboard.layouts || result.dashboard.layout || {}
-              }
-              setDashboardData(normalizedData)
-              setIsLoading(false)
-              return
+          const apiResult = await dashboardService.getSharedDashboard(panelId)
+          if (apiResult && apiResult.success !== false) {
+            const dashboard = apiResult.dashboard || apiResult
+            console.log('🔍 SharedDashboardView - Loaded data from backend:', dashboard)
+            console.log('🔍 Widgets count:', dashboard.widgets?.length || 0)
+            console.log('🔍 Layouts:', dashboard.layouts)
+            console.log('🔍 Widgets data:', dashboard.widgets)
+
+            const normalizedData = {
+              ...dashboard,
+              layouts: dashboard.layouts || dashboard.layout || {}
             }
+            setDashboardData(normalizedData)
+            setIsLoading(false)
+            return
           }
         } catch (apiError) {
           console.log('Backend API not available, trying local sources:', apiError)
@@ -201,10 +199,10 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     console.log('🔍 Rendering widget:', widget)
     
     const commonProps = {
-      id: widget.id,
-      data: widget.data || {},
-      isReadOnly: true,
-      isShared: true
+      widgetId: widget.id,
+      title: widget.title || widget.type,
+      connected: false,
+      deviceInfo: null
     }
 
     console.log('🔍 Common props for widget:', commonProps)
@@ -212,26 +210,26 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     let renderedWidget
     switch (widget.type) {
       case 'gauge':
-        renderedWidget = <GaugeWidget key={widget.id} {...commonProps} />
+        renderedWidget = <GaugeWidget key={widget.id} {...commonProps} value={50} />
         break
       case 'chart':
-        renderedWidget = <ChartWidget key={widget.id} {...commonProps} />
+        renderedWidget = <ChartWidget key={widget.id} {...commonProps} autoGenerate={true} />
         break
       case 'map':
-        renderedWidget = <MapWidget key={widget.id} {...commonProps} />
+        renderedWidget = <MapWidget key={widget.id} {...commonProps} devices={[]} />
         break
       case 'notification':
-        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} />
+        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} notifications={[]} setNotifications={() => {}} />
         break
       case 'toggle':
-        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} />
+        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} isOn={false} setIsOn={() => {}} />
         break
       case 'sensor':
       case 'sensor-tile':
-        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} />
+        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} value={25} />
         break
       case 'slider':
-        renderedWidget = <SliderWidget key={widget.id} {...commonProps} />
+        renderedWidget = <SliderWidget key={widget.id} {...commonProps} value={50} setValue={() => {}} />
         break
       case 'model3d':
       case '3d-model':

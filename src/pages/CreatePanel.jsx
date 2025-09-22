@@ -174,7 +174,9 @@ function CreatePanel() {
             max={widget.maxValue || widget.max || 100}
             unit={widget.unit || '%'}
             color={widget.color || '#ef4444'}
-            autoGenerate={true}
+            value={50}
+            connected={false}
+            deviceInfo={null}
           />
         )
       case 'chart':
@@ -201,7 +203,10 @@ function CreatePanel() {
           <NotificationWidget
             widgetId={widget.i}
             title={widget.title || 'Notifications'}
-            autoGenerate={true}
+            notifications={[]}
+            connected={false}
+            deviceInfo={null}
+            setNotifications={() => {}}
           />
         )
       case 'toggle':
@@ -209,7 +214,10 @@ function CreatePanel() {
           <ToggleWidget
             widgetId={widget.i}
             title={widget.title || 'Toggle'}
-            autoGenerate={true}
+            isOn={false}
+            connected={false}
+            deviceInfo={null}
+            setIsOn={() => {}}
           />
         )
       case 'sensor-tile':
@@ -220,7 +228,9 @@ function CreatePanel() {
             unit={widget.unit || '°C'}
             min={widget.minValue || widget.min || 0}
             max={widget.maxValue || widget.max || 100}
-            autoGenerate={true}
+            value={25}
+            connected={false}
+            deviceInfo={null}
           />
         )
       case 'slider':
@@ -232,7 +242,10 @@ function CreatePanel() {
             max={widget.maxValue || widget.max || 100}
             unit={widget.unit || ''}
             color={widget.color || '#ef4444'}
-            autoGenerate={true}
+            value={50}
+            connected={false}
+            deviceInfo={null}
+            setValue={() => {}}
           />
         )
       case '3d-model':
@@ -244,6 +257,8 @@ function CreatePanel() {
             color={widget.color || '#3b82f6'}
             size="small"
             mqttTopic={widget.mqttTopic}
+            connected={false}
+            deviceInfo={null}
           />
         )
       default:
@@ -278,34 +293,52 @@ function CreatePanel() {
       
       // Convert grid widgets to panel widget format if needed
       const convertedWidgets = data.widgets.map(widget => {
-        // Create clean widget object without 'i' property for backend
+        // Create clean widget object with only backend-allowed properties
         const cleanWidget = {
           id: widget.id || widget.i, // Use id or i as the main id
-          i: widget.id || widget.i, // Keep 'i' for grid layout compatibility
           type: widget.type,
           x: widget.x,
           y: widget.y,
           w: widget.w,
           h: widget.h,
           title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
-          dataType: widget.dataType || 'int',
-          entryType: widget.entryType || 'automatic',
-          minValue: widget.minValue || 0,
-          maxValue: widget.maxValue || 100,
-          dataChannelId: widget.dataChannelId || 0
+          // Put additional properties in config object (backend allows config)
+          config: {
+            dataType: widget.dataType || 'int',
+            entryType: widget.entryType || 'automatic',
+            minValue: widget.minValue || 0,
+            maxValue: widget.maxValue || 100,
+            dataChannelId: widget.dataChannelId || 0,
+            color: widget.color,
+            unit: widget.unit,
+            chartType: widget.chartType,
+            modelType: widget.modelType,
+            mqttTopic: widget.mqttTopic
+          }
         }
         
-        // Remove any undefined values
+        // Remove any undefined values and the 'i' property
         Object.keys(cleanWidget).forEach(key => {
-          if (cleanWidget[key] === undefined) {
+          if (cleanWidget[key] === undefined || key === 'i') {
             delete cleanWidget[key]
           }
         })
+        
+        // Clean up config object
+        if (cleanWidget.config) {
+          Object.keys(cleanWidget.config).forEach(key => {
+            if (cleanWidget.config[key] === undefined) {
+              delete cleanWidget.config[key]
+            }
+          })
+        }
         
         return cleanWidget
       })
       
       console.log('🔍 Converted widgets for publishing:', convertedWidgets)
+      console.log('🔍 First widget structure:', convertedWidgets[0])
+      console.log('🔍 Checking for "i" property in first widget:', 'i' in convertedWidgets[0])
       
       const panelData = {
         name: panelName,
@@ -320,21 +353,43 @@ function CreatePanel() {
       
       let savedPanel
       if (currentPanel) {
-        // Update existing panel
-        panelData.id = currentPanel.id
-        try {
-          const result = await dashboardService.updateDashboard(currentPanel.id, panelData)
-          updatePanel(currentPanel.id, panelData)
-          savedPanel = { ...currentPanel, ...panelData }
-          console.log('Panel updated successfully:', result)
-          alert('✅ New panel has been created!')
-          // Redirect to My Panels page after successful save
-          setTimeout(() => {
-            handleNavigation('/panels')
-          }, 1000)
-        } catch (backendError) {
-          console.log('Backend update failed, using local storage:', backendError.message)
-          throw backendError // This will trigger the fallback
+        // Check if panel exists in backend first
+        const existsInBackend = await dashboardService.dashboardExists(currentPanel.id)
+        
+        if (existsInBackend) {
+          // Panel exists in backend, update it
+          try {
+            const result = await dashboardService.updateDashboard(currentPanel.id, panelData)
+            updatePanel(currentPanel.id, panelData)
+            savedPanel = { ...currentPanel, ...panelData }
+            console.log('Panel updated successfully in backend:', result)
+            alert('✅ Panel has been updated!')
+            // Redirect to My Panels page after successful save
+            setTimeout(() => {
+              handleNavigation('/panels')
+            }, 1000)
+          } catch (backendError) {
+            console.log('Backend update failed:', backendError.message)
+            throw backendError // This will trigger the fallback
+          }
+        } else {
+          // Panel doesn't exist in backend, create it
+          console.log('Panel not found in backend, creating new dashboard...')
+          try {
+            const createResult = await dashboardService.saveDashboard(panelData)
+            savedPanel = { ...currentPanel, ...panelData, id: createResult.dashboard.id }
+            updatePanel(currentPanel.id, savedPanel)
+            setCurrentPanel(savedPanel)
+            console.log('Panel created successfully in backend:', createResult)
+            alert('✅ Panel has been saved!')
+            // Redirect to My Panels page after successful save
+            setTimeout(() => {
+              handleNavigation('/panels')
+            }, 1000)
+          } catch (createError) {
+            console.log('Backend create failed, using local storage:', createError.message)
+            throw createError // This will trigger the fallback
+          }
         }
       } else {
         // Create new panel
@@ -403,7 +458,7 @@ function CreatePanel() {
         if (currentPanel) {
           updatePanel(currentPanel.id, fallbackPanelData)
           savedPanel = { ...currentPanel, ...fallbackPanelData }
-          alert('✅ New panel has been created!')
+          alert('✅ Panel has been saved locally!')
           // Redirect to My Panels page after successful local save
           setTimeout(() => {
             handleNavigation('/panels')
@@ -411,7 +466,7 @@ function CreatePanel() {
         } else {
           savedPanel = createPanel(fallbackPanelData)
           setCurrentPanel(savedPanel)
-          alert('✅ New panel has been created!')
+          alert('✅ New panel has been created locally!')
           // Redirect to My Panels page after successful local save
           setTimeout(() => {
             handleNavigation('/panels')

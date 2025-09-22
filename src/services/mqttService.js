@@ -14,11 +14,12 @@ class MQTTService {
   // Connect to MQTT broker
   async connect(options = {}) {
     const defaultOptions = {
-      host: process.env.VITE_MQTT_HOST || 'localhost',
-      port: process.env.VITE_MQTT_PORT || 1883,
-      protocol: process.env.VITE_MQTT_PROTOCOL || 'ws',
-      username: process.env.VITE_MQTT_USERNAME || '',
-      password: process.env.VITE_MQTT_PASSWORD || '',
+      host: (import.meta?.env?.VITE_MQTT_HOST) || 'localhost',
+      // Prefer 9001 by default for WebSocket if no port provided
+      port: Number(import.meta?.env?.VITE_MQTT_PORT) || ((import.meta?.env?.VITE_MQTT_PROTOCOL || 'ws') === 'ws' ? 9001 : 1883),
+      protocol: (import.meta?.env?.VITE_MQTT_PROTOCOL) || 'ws',
+      username: (import.meta?.env?.VITE_MQTT_USERNAME) || '',
+      password: (import.meta?.env?.VITE_MQTT_PASSWORD) || '',
       clientId: `iot-dashboard-${Math.random().toString(16).substr(2, 8)}`,
       clean: true,
       reconnectPeriod: 5000,
@@ -27,7 +28,14 @@ class MQTTService {
     }
 
     try {
+      console.log('🔎 Vite MQTT env:', {
+        VITE_MQTT_PROTOCOL: import.meta?.env?.VITE_MQTT_PROTOCOL,
+        VITE_MQTT_HOST: import.meta?.env?.VITE_MQTT_HOST,
+        VITE_MQTT_PORT: import.meta?.env?.VITE_MQTT_PORT,
+        VITE_MQTT_USERNAME: import.meta?.env?.VITE_MQTT_USERNAME ? 'set' : undefined
+      })
       const brokerUrl = `${defaultOptions.protocol}://${defaultOptions.host}:${defaultOptions.port}`
+      console.log('🔧 MQTT broker URL:', brokerUrl)
       
       this.client = mqtt.connect(brokerUrl, {
         clientId: defaultOptions.clientId,
@@ -253,34 +261,9 @@ class MQTTService {
 
   // Simulate connection for demo purposes
   simulateConnection() {
-    console.log('🎭 Simulating MQTT connection for demo')
-    this.isConnected = true
-    
-    // Simulate some data
-    setInterval(() => {
-      if (this.isConnected) {
-        // Simulate sensor data
-        const topics = [
-          'sensors/temperature',
-          'sensors/humidity',
-          'sensors/pressure',
-          'devices/status'
-        ]
-        
-        topics.forEach(topic => {
-          if (this.messageHandlers.has(topic)) {
-            const data = {
-              value: Math.random() * 100,
-              timestamp: new Date().toISOString(),
-              unit: topic.includes('temperature') ? '°C' : 
-                    topic.includes('humidity') ? '%' : 
-                    topic.includes('pressure') ? 'hPa' : ''
-            }
-            this.handleMessage(topic, data)
-          }
-        })
-      }
-    }, 3000)
+    console.log('🎭 MQTT connection simulation disabled - ready for real-time data')
+    this.isConnected = false
+    // Auto-generation removed - will be replaced with real MQTT connection
   }
 }
 

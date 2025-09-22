@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { useAutoValue } from '../../hooks/useAutoValue'
+import React, { useMemo, useState } from 'react'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
+import mqttService from '../../services/mqttService'
 
 export const SliderWidget = ({ 
   widgetId,
@@ -9,24 +10,32 @@ export const SliderWidget = ({
   unit = '',
   color = '#ef4444',
   panelId = 'default',
-  autoGenerate = true
+  value = 50,
+  connected = false,
+  deviceInfo = null,
+  setValue = () => {},
+  // Optional MQTT wiring
+  stateTopic,
+  commandTopic,
+  valuePath
 }) => {
-  const { value, connected, setValue, deviceInfo } = useAutoValue(
-    widgetId, 
-    'slider', 
-    { min, max, unit }, 
-    panelId, 
-    autoGenerate
-  )
   const [isDragging, setIsDragging] = useState(false)
 
 
+  // Live reflect via MQTT state topic
+  const { value: liveValue, connected: mqttConnected } = useMqttTopic(stateTopic, { valuePath })
+  const effectiveConnected = connected || mqttConnected
+  const effectiveValue = useMemo(() => (typeof liveValue === 'number' ? liveValue : value), [liveValue, value])
+
   const handleSliderChange = (newValue) => {
     setValue(newValue)
+    if (commandTopic) {
+      mqttService.publish(commandTopic, newValue, { qos: 0, retain: false })
+    }
   }
 
   // Validate values to prevent errors
-  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 50
+  const safeValue = typeof effectiveValue === 'number' && !isNaN(effectiveValue) ? effectiveValue : 50
   const safeMin = typeof min === 'number' && !isNaN(min) ? min : 0
   const safeMax = typeof max === 'number' && !isNaN(max) ? max : 100
   const safeUnit = typeof unit === 'string' ? unit : ''
@@ -42,9 +51,9 @@ export const SliderWidget = ({
           <h3 className="text-sm font-bold text-gray-800 truncate">{title}</h3>
         </div>
         <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className={`text-xs font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
-            {connected ? 'Live' : 'Offline'}
+          <div className={`w-2 h-2 rounded-full ${effectiveConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-xs font-medium ${effectiveConnected ? 'text-green-600' : 'text-red-600'}`}>
+            {effectiveConnected ? 'Live' : 'Offline'}
           </span>
         </div>
       </div>

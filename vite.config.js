@@ -11,11 +11,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
     open: true,
     host: 'localhost',
     hmr: {
-      clientPort: 3000,
+      clientPort: 5173,
     },
   },
   build: {

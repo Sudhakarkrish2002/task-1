@@ -205,6 +205,54 @@ class DashboardService {
   }
 
   /**
+   * Check if a dashboard exists in the backend
+   * @param {string} dashboardId - ID of dashboard to check
+   * @returns {Promise<boolean>} True if dashboard exists
+   */
+  async dashboardExists(dashboardId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/${dashboardId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Dashboard existence check failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get dashboard by ID
+   * @param {string} dashboardId - ID of dashboard to get
+   * @returns {Promise<Object>} Dashboard data
+   */
+  async getDashboard(dashboardId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/${dashboardId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to get dashboard');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error getting dashboard:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if backend is available
    * @returns {Promise<boolean>} True if backend is available
    */

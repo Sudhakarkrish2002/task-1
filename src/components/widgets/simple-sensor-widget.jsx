@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useAutoValue } from '../../hooks/useAutoValue'
+import React, { useMemo, useState, useEffect } from 'react'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
 
 export const SimpleSensorWidget = ({ 
   widgetId,
@@ -8,31 +8,34 @@ export const SimpleSensorWidget = ({
   min = 0,
   max = 100,
   panelId = 'default',
-  autoGenerate = true
+  value = 25,
+  connected = false,
+  deviceInfo = null,
+  // Optional MQTT wiring
+  topic,
+  valuePath
 }) => {
-  const { value, connected, deviceInfo } = useAutoValue(
-    widgetId, 
-    'sensor', 
-    { min, max, unit }, 
-    panelId, 
-    autoGenerate
-  )
   const [trend, setTrend] = useState('stable') // 'up', 'down', 'stable'
   const [prevValue, setPrevValue] = useState(value)
 
+  // MQTT subscription and effective value
+  const { value: liveValue, connected: mqttConnected } = useMqttTopic(topic, { valuePath })
+  const effectiveConnected = connected || mqttConnected
+  const effectiveValue = useMemo(() => (liveValue != null ? liveValue : value), [liveValue, value])
+
   // Track trend based on value changes
   useEffect(() => {
-    if (value !== null && prevValue !== null) {
-      if (value > prevValue) setTrend('up')
-      else if (value < prevValue) setTrend('down')
+    if (effectiveValue !== null && prevValue !== null) {
+      if (effectiveValue > prevValue) setTrend('up')
+      else if (effectiveValue < prevValue) setTrend('down')
       else setTrend('stable')
     }
-    setPrevValue(value)
-  }, [value, prevValue])
+    setPrevValue(effectiveValue)
+  }, [effectiveValue, prevValue])
 
 
   const getStatusColor = () => {
-    const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0
+    const safeValue = typeof effectiveValue === 'number' && !isNaN(effectiveValue) ? effectiveValue : 0
     const percentage = (safeValue - min) / (max - min)
     if (percentage < 0.3) return 'text-green-600'
     if (percentage < 0.7) return 'text-yellow-600'
@@ -53,8 +56,8 @@ export const SimpleSensorWidget = ({
       <div className="flex items-center justify-between p-3 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-800 truncate">{title}</h3>
         <div className="flex items-center space-x-1">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-xs text-gray-500">{connected ? 'Live' : 'Offline'}</span>
+          <div className={`w-2 h-2 rounded-full ${effectiveConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-gray-500">{effectiveConnected ? 'Live' : 'Offline'}</span>
         </div>
       </div>
       
@@ -63,7 +66,7 @@ export const SimpleSensorWidget = ({
         <div className="text-center">
           {/* Main Value */}
           <div className={`text-4xl font-bold mb-2 ${getStatusColor()}`}>
-            {typeof value === 'number' && !isNaN(value) ? value : '--'}
+            {typeof effectiveValue === 'number' && !isNaN(effectiveValue) ? effectiveValue : '--'}
           </div>
           
           {/* Unit */}

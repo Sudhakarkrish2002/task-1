@@ -1,13 +1,14 @@
 /**
  * Professional Auto-Value Generation Service
- * Provides realistic IoT device data simulation until MQTT connection is established
+ * ENABLED only for chart widgets - other widgets use real-time data
+ * Will be completely replaced with real-time data connection in the future
  */
 
 class AutoValueService {
   constructor() {
     this.subscribers = new Map()
     this.intervals = new Map()
-    this.isEnabled = true
+    this.isEnabled = true // ENABLED only for chart widgets
     this.deviceProfiles = new Map()
     this.panelContexts = new Map()
   }
@@ -21,6 +22,8 @@ class AutoValueService {
    * @param {Function} callback - Callback function to receive new values
    */
   subscribe(widgetId, widgetType, config, panelId, callback) {
+    console.log('🔍 AutoValueService: Subscribing widget', { widgetId, widgetType, config, panelId })
+    
     if (this.subscribers.has(widgetId)) {
       this.unsubscribe(widgetId)
     }
@@ -42,6 +45,8 @@ class AutoValueService {
 
     this.subscribers.set(widgetId, subscription)
     this.startValueGeneration(widgetId)
+    
+    console.log('🔍 AutoValueService: Initial value for', widgetType, ':', subscription.lastValue)
     
     // Return initial value immediately
     callback(subscription.lastValue, true)
@@ -211,7 +216,12 @@ class AutoValueService {
    */
   startValueGeneration(widgetId) {
     const subscription = this.subscribers.get(widgetId)
-    if (!subscription || !this.isEnabled) return
+    console.log('🔍 AutoValueService: Starting value generation for', widgetId, 'subscription:', !!subscription, 'enabled:', this.isEnabled)
+    
+    if (!subscription || !this.isEnabled) {
+      console.log('🔍 AutoValueService: Not starting generation - subscription:', !!subscription, 'enabled:', this.isEnabled)
+      return
+    }
 
     const interval = setInterval(() => {
       if (!this.isEnabled) return
@@ -219,10 +229,12 @@ class AutoValueService {
       const newValue = this.generateValue(subscription)
       subscription.lastValue = newValue
       subscription.lastUpdate = Date.now()
+      console.log('🔍 AutoValueService: Generated new value for', widgetId, ':', newValue)
       subscription.callback(newValue, true)
     }, subscription.deviceProfile.behavior.updateInterval)
 
     this.intervals.set(widgetId, interval)
+    console.log('🔍 AutoValueService: Value generation started for', widgetId)
   }
 
   /**

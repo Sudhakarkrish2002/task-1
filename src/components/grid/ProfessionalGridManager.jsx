@@ -71,7 +71,8 @@ export const ProfessionalGridManager = ({
         widgetId: widget.id,
         title: widget.title,
         panelId: 'default',
-        autoGenerate: true
+        connected: false,
+        deviceInfo: null
       }
 
       switch (widgetType) {
@@ -83,6 +84,7 @@ export const ProfessionalGridManager = ({
               max={widget.maxValue || 100}
               unit={widget.data?.unit || '%'}
               color="#ef4444"
+              value={50}
             />
           )
         case 'chart':
@@ -91,12 +93,15 @@ export const ProfessionalGridManager = ({
               {...commonProps}
               chartType="bar"
               color="#ef4444"
+              autoGenerate={true}
             />
           )
         case 'toggle':
           return (
             <ToggleWidget
               {...commonProps}
+              isOn={false}
+              setIsOn={() => {}}
             />
           )
         case 'slider':
@@ -107,24 +112,30 @@ export const ProfessionalGridManager = ({
               max={widget.maxValue || 100}
               unit={widget.data?.unit || ''}
               color="#ef4444"
+              value={50}
+              setValue={() => {}}
             />
           )
         case 'map':
           return (
             <MapWidget
               {...commonProps}
+              devices={[]}
             />
           )
         case 'notification':
           return (
             <NotificationWidget
               {...commonProps}
+              notifications={[]}
+              setNotifications={() => {}}
             />
           )
         case 'sensor-tile':
           return (
             <SimpleSensorWidget
               {...commonProps}
+              value={25}
             />
           )
         case '3d-model':
@@ -161,9 +172,9 @@ export const ProfessionalGridManager = ({
         
         // Convert widgets to the format expected by CreatePanel
         const convertedWidgets = widgets.map(widget => {
-          // Ensure widget has the correct format for saving
+          // Ensure widget has the correct format for saving (with 'i' for frontend, config for backend)
           return {
-            i: widget.id, // Use 'i' as the key for compatibility with CreatePanel
+            i: widget.id, // Keep 'i' for frontend compatibility
             id: widget.id,
             type: widget.type,
             x: widget.x,
@@ -171,12 +182,19 @@ export const ProfessionalGridManager = ({
             w: widget.w,
             h: widget.h,
             title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
-            dataType: widget.dataType || 'int',
-            entryType: widget.entryType || 'automatic',
-            minValue: widget.minValue || 0,
-            maxValue: widget.maxValue || 100,
-            dataChannelId: widget.dataChannelId || 0,
-            ...widget // Include any additional properties
+            // Put additional properties in config object (backend allows config)
+            config: {
+              dataType: widget.dataType || 'int',
+              entryType: widget.entryType || 'automatic',
+              minValue: widget.minValue || 0,
+              maxValue: widget.maxValue || 100,
+              dataChannelId: widget.dataChannelId || 0,
+              color: widget.color,
+              unit: widget.unit,
+              chartType: widget.chartType,
+              modelType: widget.modelType,
+              mqttTopic: widget.mqttTopic
+            }
           }
         })
         
@@ -208,7 +226,8 @@ export const ProfessionalGridManager = ({
   // Sync widgets when initialWidgets change
   useEffect(() => {
     // Ensure all widgets have the proper render function
-    const widgetsWithRender = initialWidgets.map(widget => ({
+    const safeInitial = Array.isArray(initialWidgets) ? initialWidgets : []
+    const widgetsWithRender = safeInitial.map(widget => ({
       ...widget,
       render: getWidgetRenderer(widget.type)
     }))

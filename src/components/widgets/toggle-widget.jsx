@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from 'react'
-import { useAutoValue } from '../../hooks/useAutoValue'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useMqttTopic } from '../../hooks/useMqttTopic'
+import mqttService from '../../services/mqttService'
 
 export const ToggleWidget = ({ 
   widgetId,
   title = 'Toggle',
   panelId = 'default',
-  autoGenerate = true
+  isOn = false,
+  connected = false,
+  deviceInfo = null,
+  setIsOn = () => {},
+  // Optional MQTT wiring
+  stateTopic,
+  commandTopic,
+  onPayload = 'ON',
+  offPayload = 'OFF'
 }) => {
-  const { value: isOn, connected, setValue: setIsOn, deviceInfo } = useAutoValue(
-    widgetId, 
-    'toggle', 
-    {}, 
-    panelId, 
-    autoGenerate
-  )
 
   // Mobile detection for responsive layout
   const [isMobile, setIsMobile] = useState(false)
@@ -29,8 +31,32 @@ export const ToggleWidget = ({
   }, [])
 
 
+  // Subscribe to state topic (reflect external changes)
+  const { value: liveValue, connected: mqttConnected, lastMessage } = useMqttTopic(stateTopic)
+  const effectiveConnected = connected || mqttConnected
+  const effectiveIsOn = useMemo(() => {
+    if (typeof liveValue === 'number') return liveValue !== 0
+    if (typeof lastMessage === 'string') return lastMessage.toUpperCase() === String(onPayload).toUpperCase()
+    if (lastMessage && typeof lastMessage === 'object') {
+      if (lastMessage.value != null) return Boolean(lastMessage.value)
+      if (lastMessage.state != null) return String(lastMessage.state).toUpperCase() === String(onPayload).toUpperCase()
+    }
+    return isOn
+  }, [liveValue, lastMessage, isOn, onPayload])
+
+  useEffect(() => {
+    // Keep parent in sync when MQTT updates
+    setIsOn(effectiveIsOn)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveIsOn])
+
   const handleToggle = () => {
-    setIsOn(prev => !prev)
+    const next = !effectiveIsOn
+    setIsOn(next)
+    if (commandTopic) {
+      const payload = next ? onPayload : offPayload
+      mqttService.publish(commandTopic, payload, { qos: 0, retain: false })
+    }
   }
 
   return (
@@ -42,9 +68,9 @@ export const ToggleWidget = ({
           <h3 className="text-lg font-bold text-gray-800 truncate">{title}</h3>
         </div>
         <div className="flex items-center space-x-3">
-          <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className={`text-sm font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
-            {connected ? 'Live' : 'Offline'}
+          <div className={`w-3 h-3 rounded-full ${effectiveConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-sm font-medium ${effectiveConnected ? 'text-green-600' : 'text-red-600'}`}>
+            {effectiveConnected ? 'Live' : 'Offline'}
           </span>
         </div>
       </div>
@@ -56,22 +82,22 @@ export const ToggleWidget = ({
           <button
             onClick={handleToggle}
             className={`toggle-button relative inline-flex h-14 w-28 items-center rounded-full transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-offset-1 shadow-lg hover:shadow-xl ${
-              isOn 
+              effectiveIsOn 
                 ? 'bg-gradient-to-r from-green-400 to-green-500 focus:ring-green-300' 
                 : 'bg-gradient-to-r from-gray-300 to-gray-400 focus:ring-gray-300'
             }`}
           >
             <span
               className={`toggle-knob inline-block h-12 w-12 transform rounded-full bg-white shadow-xl transition-all duration-500 ${
-                isOn ? 'translate-x-14' : 'translate-x-1'
+                effectiveIsOn ? 'translate-x-14' : 'translate-x-1'
               }`}
             />
             {/* Toggle Icons */}
             <div className="absolute inset-0 flex items-center justify-between px-3">
-              <div className={`text-white text-sm font-bold transition-opacity duration-300 ${isOn ? 'opacity-0' : 'opacity-100'}`}>
+              <div className={`text-white text-sm font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-0' : 'opacity-100'}`}>
                 OFF
               </div>
-              <div className={`text-white text-sm font-bold transition-opacity duration-300 ${isOn ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`text-white text-sm font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-100' : 'opacity-0'}`}>
                 ON
               </div>
             </div>
@@ -80,20 +106,20 @@ export const ToggleWidget = ({
           {/* Status Display */}
           <div className="text-center">
             <div className={`${isMobile ? 'text-2xl' : 'text-4xl'} font-bold ${isMobile ? 'mb-1' : 'mb-2'} transition-colors duration-300 ${
-              isOn ? 'text-green-600' : 'text-gray-500'
+              effectiveIsOn ? 'text-green-600' : 'text-gray-500'
             }`}>
-              {isOn ? 'ON' : 'OFF'}
+              {effectiveIsOn ? 'ON' : 'OFF'}
             </div>
             <div className={`${isMobile ? 'text-sm' : 'text-base'} font-medium transition-colors duration-300 ${
-              isOn ? 'text-green-600' : 'text-gray-500'
+              effectiveIsOn ? 'text-green-600' : 'text-gray-500'
             }`}>
-              {isMobile ? (isOn ? 'Active' : 'Inactive') : (isOn ? 'Device Active' : 'Device Inactive')}
+              {isMobile ? (effectiveIsOn ? 'Active' : 'Inactive') : (effectiveIsOn ? 'Device Active' : 'Device Inactive')}
             </div>
           </div>
           
           {/* Status Indicator */}
           <div className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} rounded-full transition-all duration-500 ${
-            isOn ? 'bg-green-500 animate-pulse shadow-xl' : 'bg-gray-400'
+            effectiveIsOn ? 'bg-green-500 animate-pulse shadow-xl' : 'bg-gray-400'
           }`}></div>
         </div>
       </div>

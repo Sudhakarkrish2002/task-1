@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { Box, RotateCcw, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
-import { useAutoValue } from '../../hooks/useAutoValue'
 
 export const Model3DWidget = ({ 
   widgetId,
@@ -12,41 +11,15 @@ export const Model3DWidget = ({
   size = 'medium',
   mqttTopic = null,
   panelId = 'default',
-  autoGenerate = true
+  connected = false,
+  deviceInfo = null
 }) => {
-  const { value: modelData, connected, deviceInfo } = useAutoValue(
-    widgetId, 
-    'model3d', 
-    { modelType, rotation, scale }, 
-    panelId, 
-    autoGenerate
-  )
   const [currentRotation, setCurrentRotation] = useState(rotation)
   const [currentScale, setCurrentScale] = useState(scale)
   const [isRotating, setIsRotating] = useState(false)
 
-  // Update rotation and scale from auto-generated data
-  useEffect(() => {
-    if (modelData) {
-      setCurrentRotation(modelData.rotation)
-      setCurrentScale(modelData.scale)
-      setIsRotating(modelData.isRotating)
-    }
-  }, [modelData])
 
-  // Auto-rotation effect
-  useEffect(() => {
-    if (!isRotating) return
-
-    const interval = setInterval(() => {
-      setCurrentRotation(prev => ({
-        ...prev,
-        y: prev.y + 2 // Rotate 2 degrees per frame
-      }))
-    }, 50) // 20 FPS
-
-    return () => clearInterval(interval)
-  }, [isRotating])
+  // Auto-rotation removed - will be controlled by real-time data
 
   // Size configurations
   const sizeConfig = {
@@ -67,7 +40,6 @@ export const Model3DWidget = ({
     }
     setCurrentRotation(newRotation)
     
-    // MQTT integration removed
   }
 
   // Handle scale control
@@ -75,7 +47,6 @@ export const Model3DWidget = ({
     const newScale = Math.max(0.5, Math.min(2, currentScale + (direction * 0.1)))
     setCurrentScale(newScale)
     
-    // MQTT integration removed
   }
 
   // Toggle auto-rotation
@@ -83,7 +54,6 @@ export const Model3DWidget = ({
     const newRotatingState = !isRotating
     setIsRotating(newRotatingState)
     
-    // MQTT integration removed
   }
 
   // Render 3D model based on type
