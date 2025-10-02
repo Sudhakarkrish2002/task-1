@@ -19,6 +19,7 @@ import { useScrollToTop } from './hooks/useScrollToTop'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
 import mqttService from './services/mqttService'
+import { createContext, useContext } from 'react'
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -33,6 +34,17 @@ const SharedDashboardView = lazy(() => import('./components/SharedDashboardView'
 // Feature pages
 const Features = lazy(() => import('./pages/Features'))
 const Contact = lazy(() => import('./pages/Contact'))
+
+// MQTT Context
+export const MQTTContext = createContext()
+
+export const useMQTT = () => {
+  const context = useContext(MQTTContext)
+  if (!context) {
+    throw new Error('useMQTT must be used within an MQTTProvider')
+  }
+  return context
+}
 
 
 // Shared Dashboard Route Component
@@ -55,6 +67,13 @@ function AppContent() {
   const [mqttStatus, setMqttStatus] = useState('disconnected')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [activeSubscriptions, setActiveSubscriptions] = useState(new Set())
+  const [mqttConnectionStatus, setMqttConnectionStatus] = useState({
+    isConnected: false,
+    isConnecting: false,
+    connectionAttempted: false,
+    subscriptions: []
+  })
   
   // Mobile performance optimizations
   useMobilePerformance()
@@ -86,27 +105,291 @@ function AppContent() {
         console.log('🔄 Attempting MQTT connection for real-time data...')
         mqttService.connect().then(() => {
           setMqttStatus('connected')
+          setMqttConnectionStatus(mqttService.getConnectionStatus())
           console.log('✅ MQTT connected successfully - real-time data flow active')
+          
+          // Subscribe to global topics if needed
+          subscribeToGlobalTopics()
         }).catch((error) => {
           console.log('⚠️ MQTT broker not available:', error.message)
           setMqttStatus('disconnected')
+          setMqttConnectionStatus(mqttService.getConnectionStatus())
           console.log('❌ Real-time data unavailable - widgets will show offline status')
         })
+      } else if (mqttService.isConnected) {
+        // Update status if already connected
+        setMqttStatus('connected')
+        setMqttConnectionStatus(mqttService.getConnectionStatus())
       }
     } else {
       setMqttStatus('disconnected')
+      setMqttConnectionStatus({
+        isConnected: false,
+        isConnecting: false,
+        connectionAttempted: false,
+        subscriptions: []
+      })
       mqttService.disconnect()
     }
   }, [isAuthenticated, user?.email]) // Use user.email instead of user object to prevent unnecessary re-runs
 
+  // Subscribe to global topics
+  const subscribeToGlobalTopics = () => {
+    if (!mqttService.isConnected) {
+      console.log('❌ Cannot subscribe to global topics - MQTT not connected')
+      return
+    }
+
+    console.log('🔄 Starting global topic subscriptions...')
+    
+    // Subscribe to system-wide topics
+    const globalTopics = [
+      'system/status',
+      'system/notifications',
+      'system/alerts'
+    ]
+
+    globalTopics.forEach(topic => {
+      const success = mqttService.subscribe(topic, (data, receivedTopic) => {
+        console.log(`📨 Global topic ${receivedTopic} received:`, data)
+        handleGlobalMessage(receivedTopic, data)
+      })
+
+      if (success) {
+        setActiveSubscriptions(prev => new Set([...prev, topic]))
+        console.log(`✅ Successfully subscribed to global topic: ${topic}`)
+      } else {
+        console.log(`❌ Failed to subscribe to global topic: ${topic}`)
+      }
+    })
+
+    // Print current subscription status
+    setTimeout(() => {
+      const status = mqttService.getConnectionStatus()
+      console.log('📊 Current MQTT subscription status:', {
+        isConnected: status.isConnected,
+        totalSubscriptions: status.subscriptions.length,
+        activeSubscriptions: Array.from(activeSubscriptions),
+        mqttServiceSubscriptions: status.subscriptions
+      })
+    }, 1000)
+  }
+
+  // Handle global MQTT messages
+  const handleGlobalMessage = (topic, data) => {
+    switch (topic) {
+      case 'system/status':
+        console.log('📊 System status update:', data)
+        break
+      case 'system/notifications':
+        console.log('🔔 System notification:', data)
+        // You can integrate with toast notifications here
+        break
+      case 'system/alerts':
+        console.log('🚨 System alert:', data)
+        // You can integrate with alert system here
+        break
+      default:
+        console.log('📨 Unknown global topic:', topic, data)
+    }
+  }
+
+  // Subscribe to panel-specific topic
+  const subscribeToPanel = (panelId, handler = null) => {
+    if (!mqttService.isConnected) {
+      console.warn('⚠️ MQTT not connected, cannot subscribe to panel:', panelId)
+      return false
+    }
+
+    console.log(`🔄 Attempting to subscribe to panel: ${panelId}`)
+    const success = mqttService.subscribeToPanel(panelId, handler)
+    if (success) {
+      setActiveSubscriptions(prev => new Set([...prev, panelId]))
+      setMqttConnectionStatus(mqttService.getConnectionStatus())
+      console.log(`✅ Successfully subscribed to panel: ${panelId}`)
+      
+      // Print updated subscription status
+      const status = mqttService.getConnectionStatus()
+      console.log('📊 Updated subscription status after panel subscription:', {
+        panelId,
+        isConnected: status.isConnected,
+        totalSubscriptions: status.subscriptions.length,
+        activeSubscriptions: Array.from(activeSubscriptions),
+        mqttServiceSubscriptions: status.subscriptions
+      })
+    } else {
+      console.log(`❌ Failed to subscribe to panel: ${panelId}`)
+    }
+    return success
+  }
+
+  // Unsubscribe from panel-specific topic
+  const unsubscribeFromPanel = (panelId, handler = null) => {
+    if (!mqttService.isConnected) {
+      console.warn('⚠️ MQTT not connected, cannot unsubscribe from panel:', panelId)
+      return false
+    }
+
+    console.log(`🔄 Attempting to unsubscribe from panel: ${panelId}`)
+    const success = mqttService.unsubscribeFromPanel(panelId, handler)
+    if (success) {
+      setActiveSubscriptions(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(panelId)
+        return newSet
+      })
+      setMqttConnectionStatus(mqttService.getConnectionStatus())
+      console.log(`✅ Successfully unsubscribed from panel: ${panelId}`)
+      
+      // Print updated subscription status
+      const status = mqttService.getConnectionStatus()
+      console.log('📊 Updated subscription status after panel unsubscription:', {
+        panelId,
+        isConnected: status.isConnected,
+        totalSubscriptions: status.subscriptions.length,
+        activeSubscriptions: Array.from(activeSubscriptions),
+        mqttServiceSubscriptions: status.subscriptions
+      })
+    } else {
+      console.log(`❌ Failed to unsubscribe from panel: ${panelId}`)
+    }
+    return success
+  }
+
+  // Publish data to panel
+  const publishToPanel = (panelId, widgetId, data) => {
+    if (!mqttService.isConnected) {
+      console.warn('⚠️ MQTT not connected, cannot publish to panel:', panelId)
+      return false
+    }
+
+    const success = mqttService.publishToPanel(panelId, widgetId, data)
+    if (success) {
+      console.log(`✅ Published to panel ${panelId}, widget ${widgetId}:`, data)
+    }
+    return success
+  }
+
+  // Listen for widget update events
+  useEffect(() => {
+    const handleWidgetUpdate = (event) => {
+      const { panelId, widgetId, data, timestamp } = event.detail
+      console.log(`🎯 Widget update received:`, { panelId, widgetId, data, timestamp })
+      
+      // You can add custom logic here to handle widget updates
+      // For example, updating local state, triggering re-renders, etc.
+    }
+
+    window.addEventListener('mqtt-widget-update', handleWidgetUpdate)
+    
+    return () => {
+      window.removeEventListener('mqtt-widget-update', handleWidgetUpdate)
+    }
+  }, [])
+
+  // Monitor MQTT connection status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (mqttService.isConnected !== mqttConnectionStatus.isConnected) {
+        const newStatus = mqttService.getConnectionStatus()
+        setMqttConnectionStatus(newStatus)
+        setMqttStatus(mqttService.isConnected ? 'connected' : 'disconnected')
+        
+        // Print connection status change
+        console.log('🔄 MQTT connection status changed:', {
+          previousStatus: mqttConnectionStatus.isConnected ? 'connected' : 'disconnected',
+          newStatus: mqttService.isConnected ? 'connected' : 'disconnected',
+          totalSubscriptions: newStatus.subscriptions.length,
+          activeSubscriptions: Array.from(activeSubscriptions),
+          mqttServiceSubscriptions: newStatus.subscriptions
+        })
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [mqttConnectionStatus.isConnected, activeSubscriptions])
+
+  // Periodic subscription status logging
+  useEffect(() => {
+    const statusInterval = setInterval(() => {
+      if (mqttService.isConnected) {
+        const status = mqttService.getConnectionStatus()
+        console.log('📊 Periodic MQTT subscription status check:', {
+          timestamp: new Date().toISOString(),
+          isConnected: status.isConnected,
+          isConnecting: status.isConnecting,
+          connectionAttempted: status.connectionAttempted,
+          totalSubscriptions: status.subscriptions.length,
+          activeSubscriptions: Array.from(activeSubscriptions),
+          mqttServiceSubscriptions: status.subscriptions,
+          clientId: status.clientId
+        })
+      }
+    }, 30000) // Log every 30 seconds
+
+    return () => clearInterval(statusInterval)
+  }, [activeSubscriptions])
+
   // Handle logout
   const handleLogout = () => {
+    console.log('🔄 Starting logout process - cleaning up MQTT subscriptions...')
+    console.log('📊 Current subscriptions before cleanup:', {
+      activeSubscriptions: Array.from(activeSubscriptions),
+      mqttServiceSubscriptions: mqttService.getConnectionStatus().subscriptions
+    })
+    
+    // Clean up MQTT subscriptions
+    activeSubscriptions.forEach(topic => {
+      console.log(`🔄 Unsubscribing from topic: ${topic}`)
+      mqttService.unsubscribe(topic)
+    })
+    setActiveSubscriptions(new Set())
+    
     logout()
     setMqttStatus('disconnected')
+    setMqttConnectionStatus({
+      isConnected: false,
+      isConnecting: false,
+      connectionAttempted: false,
+      subscriptions: []
+    })
     mqttService.disconnect()
+    
+    console.log('✅ Logout complete - all MQTT subscriptions cleaned up')
     showSuccess('Logged out successfully')
   }
 
+  // Cleanup MQTT subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up all subscriptions when component unmounts
+      console.log('🔄 App component unmounting - cleaning up MQTT subscriptions...')
+      console.log('📊 Final subscription cleanup:', {
+        activeSubscriptions: Array.from(activeSubscriptions),
+        mqttServiceSubscriptions: mqttService.getConnectionStatus().subscriptions
+      })
+      
+      activeSubscriptions.forEach(topic => {
+        console.log(`🔄 Unsubscribing from topic during cleanup: ${topic}`)
+        mqttService.unsubscribe(topic)
+      })
+      
+      console.log('✅ App component cleanup complete')
+    }
+  }, [activeSubscriptions])
+
+  // MQTT Context Value
+  const mqttContextValue = {
+    mqttService,
+    mqttStatus,
+    mqttConnectionStatus,
+    activeSubscriptions: Array.from(activeSubscriptions),
+    subscribeToPanel,
+    unsubscribeFromPanel,
+    publishToPanel,
+    subscribeToGlobalTopics,
+    handleGlobalMessage
+  }
 
   // Navigation items
   const navItems = [
@@ -155,9 +438,10 @@ function AppContent() {
   const isSharedDashboard = location.pathname.startsWith('/shared/')
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Global Navigation - Hidden for shared dashboards */}
-      {!isSharedDashboard && (
+    <MQTTContext.Provider value={mqttContextValue}>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Global Navigation - Hidden for shared dashboards */}
+        {!isSharedDashboard && (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -305,9 +589,10 @@ function AppContent() {
       {/* Global ChatBot - Hidden for shared dashboards */}
       {!isSharedDashboard && <ChatBot />}
       
-      {/* Scroll to Top Button - Hidden for shared dashboards */}
-      {!isSharedDashboard && <ScrollToTopButton />}
-    </div>
+        {/* Scroll to Top Button - Hidden for shared dashboards */}
+        {!isSharedDashboard && <ScrollToTopButton />}
+      </div>
+    </MQTTContext.Provider>
   )
 }
 

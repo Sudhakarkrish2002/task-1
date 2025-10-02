@@ -38,15 +38,14 @@ class MQTTService {
     this.connectionAttempted = true
 
     const defaultOptions = {
-      host: (import.meta?.env?.VITE_MQTT_HOST) || 'test.mosquitto.org',
-      // Use 8081 for WebSocket connection
-      port: Number(import.meta?.env?.VITE_MQTT_PORT) || ((import.meta?.env?.VITE_MQTT_PROTOCOL || 'ws') === 'ws' ? 8081 : 1883),
-      protocol: (import.meta?.env?.VITE_MQTT_PROTOCOL) || 'ws',
-      username: (import.meta?.env?.VITE_MQTT_USERNAME) || '',
-      password: (import.meta?.env?.VITE_MQTT_PASSWORD) || '',
+      host: '71123c109076412ebb47f6ede49445f3.s1.eu.hivemq.cloud',
+      port: 8884, // Use 8080 for WebSocket connection
+      protocol: 'wss',
+      username: 'hivemq.webclient.1759407250715',
+      password: 'p6H&Z>8EwbDCy7aP.,1r',
       clientId: `iot-dashboard-${Math.random().toString(16).substr(2, 8)}`,
       clean: true,
-      reconnectPeriod: 0, // Disable auto-reconnect, we'll handle it manually
+      reconnectPeriod: 1000, // Disable auto-reconnect, we'll handle it manually
       connectTimeout: 5000, // Reduced timeout
       ...options
     }
@@ -58,7 +57,8 @@ class MQTTService {
         VITE_MQTT_PORT: import.meta?.env?.VITE_MQTT_PORT,
         VITE_MQTT_USERNAME: import.meta?.env?.VITE_MQTT_USERNAME ? 'set' : undefined
       })
-      const brokerUrl = `${defaultOptions.protocol}://${defaultOptions.host}:${defaultOptions.port}`
+      
+      const brokerUrl = `${defaultOptions.protocol}://${defaultOptions.host}:${defaultOptions.port}/mqtt`;
       console.log('🔧 MQTT broker URL:', brokerUrl)
       
       this.client = mqtt.connect(brokerUrl, {

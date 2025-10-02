@@ -83,23 +83,23 @@ export const ToggleWidget = ({
           {/* Toggle Button */}
           <button
             onClick={handleToggle}
-            className={`toggle-button relative inline-flex h-14 w-28 items-center rounded-full transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-offset-1 shadow-lg hover:shadow-xl ${
+            className={`toggle-button relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-offset-1 shadow-lg hover:shadow-xl ${
               effectiveIsOn 
                 ? 'bg-gradient-to-r from-green-400 to-green-500 focus:ring-green-300' 
                 : 'bg-gradient-to-r from-gray-300 to-gray-400 focus:ring-gray-300'
             }`}
           >
             <span
-              className={`toggle-knob inline-block h-12 w-12 transform rounded-full bg-white shadow-xl transition-all duration-500 ${
-                effectiveIsOn ? 'translate-x-14' : 'translate-x-1'
+              className={`toggle-knob inline-block h-6 w-6 transform rounded-full bg-white shadow-xl transition-all duration-500 ${
+                effectiveIsOn ? 'translate-x-8' : 'translate-x-1'
               }`}
             />
             {/* Toggle Icons */}
-            <div className="absolute inset-0 flex items-center justify-between px-3">
-              <div className={`text-white text-xs font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="absolute inset-0 flex items-center justify-between px-2">
+              <div className={`text-white text-[10px] font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-0' : 'opacity-100'}`}>
                 OFF
               </div>
-              <div className={`text-white text-xs font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`text-white text-[10px] font-bold transition-opacity duration-300 ${effectiveIsOn ? 'opacity-100' : 'opacity-0'}`}>
                 ON
               </div>
             </div>
