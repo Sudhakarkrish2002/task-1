@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useMqttTopic } from '../../hooks/useMqttTopic'
+import { useRealtimeData } from '../../hooks/useRealtimeData'
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -36,9 +36,9 @@ export const GaugeWidget = ({
   const canvasRef = useRef(null)
   const isMobile = useIsMobile()
 
-  // MQTT subscription
-  const { value: liveValue, connected: mqttConnected } = useMqttTopic(topic, { valuePath })
-  const effectiveConnected = connected || mqttConnected
+  // Real-time WebSocket subscription
+  const { value: liveValue, connected: realtimeConnected } = useRealtimeData(topic, { valuePath })
+  const effectiveConnected = connected || realtimeConnected
   const effectiveValue = useMemo(() => (liveValue != null ? liveValue : value), [liveValue, value])
 
   // Validate values to prevent errors

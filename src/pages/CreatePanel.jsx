@@ -112,7 +112,11 @@ function CreatePanel() {
       entryType: widget.entryType || 'automatic',
       minValue: widget.minValue || 0,
       maxValue: widget.maxValue || 100,
-      dataChannelId: widget.dataChannelId || 0
+      dataChannelId: widget.dataChannelId || 0,
+      // MQTT topic used by widgets that support live data (e.g., Gauge)
+      mqttTopic: (widget.mqttTopic || '').trim(),
+      // Optional JSON value path for structured payloads
+      valuePath: (widget.valuePath || '').trim()
     })
     setShowWidgetSettings(true)
   }, [])
@@ -177,6 +181,9 @@ function CreatePanel() {
             value={50}
             connected={false}
             deviceInfo={null}
+            // Wire MQTT topic into Gauge for live updates
+            topic={widget.mqttTopic}
+            valuePath={widget.valuePath}
           />
         )
       case 'chart':
@@ -184,9 +191,11 @@ function CreatePanel() {
           <ChartWidget
             widgetId={widget.i}
             title={widget.title || 'Chart'}
-            chartType={widget.chartType || 'bar'}
+            chartType={widget.chartType || 'line'}
             color={widget.color || '#ef4444'}
-            autoGenerate={true}
+            // Wire MQTT topic into Chart for real-time ECharts updates
+            topic={widget.mqttTopic}
+            valuePath={widget.valuePath}
           />
         )
       case 'map':
@@ -517,12 +526,22 @@ function CreatePanel() {
       // Create panel data with the current grid state
       const panelToPublish = {
         id: currentPanel?.id || `demo-panel-${Date.now()}`,
+        // CRITICAL: Use the unique topic ID for MQTT communication
+        topicId: currentPanel?.topicId || generateTopicId(),
         name: panelName || 'Demo Dashboard',
         widgets: gridData?.widgets || [],
         layouts: gridData?.layouts || {}, // Fixed: was layout, should be layouts
         deviceCount: gridData?.widgets?.length || 0,
         stats: gridData?.stats || { totalWidgets: 0, gridUtilization: 0 },
         createdAt: currentPanel?.createdAt || new Date().toISOString()
+      }
+      
+      // Helper function to generate topic ID if not available
+      function generateTopicId() {
+        const timestamp = Date.now().toString()
+        const randomDigits = Math.floor(Math.random() * 90 + 10).toString() // 10-99
+        const topicId = timestamp + randomDigits
+        return topicId.substring(0, 15).padEnd(15, '0') // Ensure 15 digits
       }
       
       // Try to publish via backend API
@@ -833,6 +852,31 @@ function CreatePanel() {
                   </div>
                 </div>
 
+                {/* MQTT Topic (for live data) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">MQTT Topic</label>
+                  <input
+                    type="text"
+                    value={widgetSettings.mqttTopic || ''}
+                    onChange={(e) => setWidgetSettings({ ...widgetSettings, mqttTopic: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
+                    placeholder="e.g. home/livingroom/temperature"
+                  />
+                </div>
+
+                {/* Optional: Value Path for JSON payloads */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Value Path (JSON)</label>
+                  <input
+                    type="text"
+                    value={widgetSettings.valuePath || ''}
+                    onChange={(e) => setWidgetSettings({ ...widgetSettings, valuePath: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
+                    placeholder="e.g. payload.temp"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Leave empty for plain numeric payloads (e.g., 22.5).</p>
+                </div>
+
                 {/* 6. Data Channel ID */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data Channel ID</label>
@@ -915,6 +959,39 @@ function CreatePanel() {
                     </svg>
                     <p className="text-green-800 font-medium">Your dashboard "{publishedDashboard.name}" is now live and ready for sharing!</p>
                   </div>
+                </div>
+
+                {/* 7. MQTT Topic ID (for live data) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Panel Topic ID</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={currentPanel?.topicId || 'Generating...'}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                      placeholder="Auto-generated 15-digit topic ID"
+                    />
+                    <button
+                      onClick={copyTopicId}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                    >
+                      {isTopicIdCopied ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    This is your unique panel topic ID. Use this in MQTT Explorer to publish data to your dashboard widgets.
+                  </p>
                 </div>
 
 

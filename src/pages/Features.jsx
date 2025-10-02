@@ -603,21 +603,21 @@ function Features() {
                 user-friendly experience.
               </p>
               <div className="flex space-x-3 sm:space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <button className="text-gray-400 hover:text-white transition-colors">
                   <Github className="w-4 h-4 sm:w-5 sm:h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   <Facebook className="w-4 h-4 sm:w-5 sm:h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   <Youtube className="w-4 h-4 sm:w-5 sm:h-5" />
-                </a>
+                </button>
               </div>
             </div>
 
@@ -687,34 +687,34 @@ function Features() {
               <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6">Developers</h3>
               <ul className="space-y-2 sm:space-y-3">
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center">
+                  <button className="text-gray-400 hover:text-white transition-colors flex items-center">
                     <BookOpen className="w-4 h-4 mr-2" />
                     Documentation
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center">
+                  <button className="text-gray-400 hover:text-white transition-colors flex items-center">
                     <Code className="w-4 h-4 mr-2" />
                     API Reference
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center">
+                  <button className="text-gray-400 hover:text-white transition-colors flex items-center">
                     <Cpu className="w-4 h-4 mr-2" />
                     Hardware Support
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center">
+                  <button className="text-gray-400 hover:text-white transition-colors flex items-center">
                     <Users className="w-4 h-4 mr-2" />
                     Community
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center">
+                  <button className="text-gray-400 hover:text-white transition-colors flex items-center">
                     <FileText className="w-4 h-4 mr-2" />
                     Tutorials
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -806,18 +806,18 @@ function Features() {
                 © 2024 IoT Dashboard. All rights reserved.
               </div>
               <div className="flex flex-wrap justify-center md:justify-end space-x-4 sm:space-x-6 text-xs sm:text-sm">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <button className="text-gray-400 hover:text-white transition-colors">
                   Privacy Policy
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   Terms of Service
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   Cookie Policy
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors">
                   GDPR
-                </a>
+                </button>
               </div>
             </div>
           </div>

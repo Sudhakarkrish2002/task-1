@@ -78,23 +78,26 @@ function AppContent() {
   }, [isUserMenuOpen])
 
 
-  // Initialize MQTT connection
+  // Initialize MQTT connection for real-time data
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Try to connect to MQTT broker
-      mqttService.connect().then(() => {
-        setMqttStatus('connected')
-        console.log('✅ MQTT connected successfully')
-      }).catch((error) => {
-        console.log('⚠️ MQTT broker not available, using simulation:', error.message)
-        mqttService.simulateConnection()
-        setMqttStatus('simulated')
-      })
+      // Only attempt connection if not already connected or connecting
+      if (!mqttService.isConnected && !mqttService.isConnecting) {
+        console.log('🔄 Attempting MQTT connection for real-time data...')
+        mqttService.connect().then(() => {
+          setMqttStatus('connected')
+          console.log('✅ MQTT connected successfully - real-time data flow active')
+        }).catch((error) => {
+          console.log('⚠️ MQTT broker not available:', error.message)
+          setMqttStatus('disconnected')
+          console.log('❌ Real-time data unavailable - widgets will show offline status')
+        })
+      }
     } else {
       setMqttStatus('disconnected')
       mqttService.disconnect()
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user?.email]) // Use user.email instead of user object to prevent unnecessary re-runs
 
   // Handle logout
   const handleLogout = () => {
@@ -290,8 +293,10 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/shared/:panelId" element={<SharedDashboardRoute />} />
-            {/* Redirect old scroll-test route to home */}
+            {/* Redirect old test routes to home */}
             <Route path="/scroll-test" element={<Navigate to="/home" replace />} />
+            <Route path="/gauge-test" element={<Navigate to="/home" replace />} />
+            <Route path="/mqtt-test" element={<Navigate to="/home" replace />} />
           </Routes>
           </Suspense>
         </ErrorBoundary>

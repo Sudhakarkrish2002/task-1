@@ -126,7 +126,7 @@ class EmailService {
       
       // Try to open mailto link
       try {
-        window.open(mailtoLink)
+        window.location.href = mailtoLink
         return {
           success: true,
           message: 'Email client opened with reset link. Please send the email to complete the process.',

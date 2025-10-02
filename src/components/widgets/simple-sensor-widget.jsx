@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { useMqttTopic } from '../../hooks/useMqttTopic'
+import { useRealtimeData } from '../../hooks/useRealtimeData'
 
 export const SimpleSensorWidget = ({ 
   widgetId,
@@ -18,9 +18,9 @@ export const SimpleSensorWidget = ({
   const [trend, setTrend] = useState('stable') // 'up', 'down', 'stable'
   const [prevValue, setPrevValue] = useState(value)
 
-  // MQTT subscription and effective value
-  const { value: liveValue, connected: mqttConnected } = useMqttTopic(topic, { valuePath })
-  const effectiveConnected = connected || mqttConnected
+  // Real-time WebSocket subscription and effective value
+  const { value: liveValue, connected: realtimeConnected } = useRealtimeData(topic, { valuePath })
+  const effectiveConnected = connected || realtimeConnected
   const effectiveValue = useMemo(() => (liveValue != null ? liveValue : value), [liveValue, value])
 
   // Track trend based on value changes

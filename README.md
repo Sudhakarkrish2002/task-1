@@ -29,8 +29,22 @@ A modern, responsive IoT control panel dashboard built with Vite, React, and Jav
 - **Visualization**: Apache ECharts, Three.js, Leaflet.js
 - **Drag & Drop**: React-Grid-Layout
 - **State Management**: Zustand
-- **Real-time**: WebSocket client
+- **Real-time**: MQTT WebSocket client
 - **Routing**: React Router
+
+### MQTT Configuration (Optional)
+The application works with or without an MQTT broker. If no MQTT broker is available, the app will use simulation mode.
+
+To use a real MQTT broker, create a `.env` file in the root directory:
+```env
+VITE_MQTT_PROTOCOL=ws
+VITE_MQTT_HOST=localhost
+VITE_MQTT_PORT=9001
+VITE_MQTT_USERNAME=
+VITE_MQTT_PASSWORD=
+```
+
+**Note**: The application will automatically fall back to simulation mode if the MQTT broker is not available.
 
 ### Key Dependencies
 - `vite`: ^4.4.0

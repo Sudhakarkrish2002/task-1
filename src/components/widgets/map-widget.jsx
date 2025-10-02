@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useMqttTopic } from '../../hooks/useMqttTopic'
+import { useRealtimeData } from '../../hooks/useRealtimeData'
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl
@@ -106,9 +106,9 @@ export const MapWidget = ({
   // Ensure devices is always an array
   const safeDevicesProp = Array.isArray(devices) ? devices : []
 
-  // Optional MQTT ingestion: expect messages with device list or single device update
-  const { lastMessage, connected: mqttConnected } = useMqttTopic(mqttTopic, { enabled: !!mqttTopic })
-  const effectiveConnected = connected || mqttConnected
+  // Optional real-time WebSocket ingestion: expect messages with device list or single device update
+  const { lastMessage, connected: realtimeConnected } = useRealtimeData(mqttTopic, { enabled: !!mqttTopic })
+  const effectiveConnected = connected || realtimeConnected
   const safeDevices = useMemo(() => {
     if (!mqttTopic || !lastMessage) return safeDevicesProp
     // If payload is a list, take it; otherwise try to merge a single device

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Lock, Eye, Copy, Check } from 'lucide-react'
+import { Lock, Eye, Copy, Check, Wifi, WifiOff } from 'lucide-react'
 import { EnhancedGridLayout } from './grid/EnhancedGridLayout'
 import { Button } from './ui/button'
 import { autoFixOverlaps } from '../lib/gridUtils'
@@ -13,6 +13,10 @@ import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
 import sharingService from '../services/sharingService'
 import dashboardService from '../services/dashboardService'
+import { usePanelMqtt } from '../hooks/usePanelMqtt'
+import widgetDataService from '../services/widgetDataService'
+import dataSimulator from '../services/dataSimulator'
+import { runAllTests } from '../utils/mqttTest'
 import './SharedDashboardView.css'
 
 // Device detection hook for responsive behavior
@@ -55,7 +59,66 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [widgetData, setWidgetData] = useState({})
+  const [showDebugInfo, setShowDebugInfo] = useState(false)
   const { isMobile, isTablet, isDesktop } = useDeviceType()
+  
+  // Initialize MQTT for real-time data using topicId
+  // Use topicId if available, otherwise fallback to panelId
+  const mqttTopic = dashboardData?.topicId || panelId
+  const { isSubscribed, connectionStatus } = usePanelMqtt(mqttTopic)
+
+  // Start data simulation when dashboard is loaded (only if no real data is coming)
+  useEffect(() => {
+    if (dashboardData && dashboardData.widgets && isAuthenticated) {
+      console.log('🚀 Dashboard loaded - waiting for real MQTT data...')
+      console.log('📊 Widgets to monitor:', dashboardData.widgets)
+      
+      // Don't start auto-simulation - wait for real MQTT data from MQTT Explorer
+      // The widgets will show offline until real data arrives
+      console.log('⏳ Waiting for real MQTT data from MQTT Explorer...')
+      console.log('📡 Panel topic to publish to:', mqttTopic)
+      console.log('📡 Panel ID:', panelId)
+      console.log('📡 Topic ID:', dashboardData?.topicId)
+    }
+
+    // Cleanup simulation on unmount
+    return () => {
+      if (panelId) {
+        console.log('🛑 Stopping any active simulation for panel:', panelId)
+        dataSimulator.stopPanelSimulation(panelId)
+      }
+    }
+  }, [dashboardData, isAuthenticated, panelId])
+
+  // Handle real-time widget data updates
+  useEffect(() => {
+    if (!mqttTopic || !isAuthenticated) return
+
+    const handleWidgetUpdate = (event) => {
+      const { panelId: eventPanelId, widgetId, data } = event.detail
+      
+      // Match both panelId and topicId for compatibility
+      if (eventPanelId === panelId || eventPanelId === mqttTopic) {
+        console.log(`🎯 Real-time update for widget ${widgetId}:`, data)
+        setWidgetData(prev => ({
+          ...prev,
+          [widgetId]: {
+            ...prev[widgetId],
+            data: data,
+            lastUpdated: new Date().toISOString(),
+            isConnected: true
+          }
+        }))
+      }
+    }
+
+    window.addEventListener('mqtt-widget-update', handleWidgetUpdate)
+    
+    return () => {
+      window.removeEventListener('mqtt-widget-update', handleWidgetUpdate)
+    }
+  }, [mqttTopic, panelId, isAuthenticated])
 
   // Load dashboard data
   useEffect(() => {
@@ -177,63 +240,102 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
 
   // Calculate responsive widget dimensions
   const calculateWidgetDimensions = useCallback((widget) => {
-    const baseWidth = Math.max(3, Math.floor((widget.w || 4) * 0.85))
-    const baseHeight = Math.max(3, Math.floor((widget.h || 3) * 0.85))
+    const baseWidth = Math.max(4, widget.w || 4) // Ensure minimum width of 4
+    const baseHeight = Math.max(3, widget.h || 3) // Ensure minimum height of 3
     
     return {
       w: baseWidth,
       h: baseHeight,
-      minW: 3,
-      minH: 3,
+      minW: 2, // Reduced minimum width
+      minH: 2, // Reduced minimum height
+      maxW: 12, // Maximum width
+      maxH: 12, // Maximum height
       // Responsive dimensions for different breakpoints
-      lg: { w: baseWidth, h: baseHeight },
-      md: { w: Math.min(8, Math.max(3, Math.ceil(baseWidth * 0.8))), h: Math.max(3, Math.ceil(baseHeight * 0.9)) },
-      sm: { w: Math.min(6, Math.max(3, Math.ceil(baseWidth * 0.7))), h: Math.max(3, Math.ceil(baseHeight * 0.8)) },
-      xs: { w: 3, h: Math.max(3, Math.ceil(baseHeight * 0.7)) },
-      xxs: { w: 2, h: Math.max(3, Math.ceil(baseHeight * 0.6)) }
+      lg: { w: baseWidth, h: baseHeight, minW: 2, minH: 2, maxW: 12, maxH: 12 },
+      md: { w: Math.min(8, Math.max(2, baseWidth)), h: Math.max(2, baseHeight), minW: 2, minH: 2, maxW: 8, maxH: 12 },
+      sm: { w: Math.min(6, Math.max(2, baseWidth)), h: Math.max(2, baseHeight), minW: 2, minH: 2, maxW: 6, maxH: 12 },
+      xs: { w: Math.max(2, Math.min(4, baseWidth)), h: Math.max(2, baseHeight), minW: 2, minH: 2, maxW: 4, maxH: 12 },
+      xxs: { w: 2, h: Math.max(2, baseHeight), minW: 2, minH: 2, maxW: 2, maxH: 12 }
     }
   }, [])
 
   // Render widget based on type
   const renderWidget = useCallback((widget) => {
-    console.log('🔍 Rendering widget:', widget)
+    console.log('🎨 Rendering widget:', widget)
+    console.log('🎨 Widget ID:', widget.id || widget.i)
+    console.log('🎨 Widget type:', widget.type)
+    console.log('🎨 Widget position:', { x: widget.x, y: widget.y, w: widget.w, h: widget.h })
+    
+    // Get real-time data for this widget
+    const realTimeData = widgetData[widget.id] || {}
+    const isConnected = realTimeData.isConnected || false
+    const lastUpdated = realTimeData.lastUpdated
     
     const commonProps = {
       widgetId: widget.id,
       title: widget.title || widget.type,
-      connected: false,
-      deviceInfo: null
+      connected: isConnected,
+      deviceInfo: null,
+      lastUpdated: lastUpdated
     }
 
-    console.log('🔍 Common props for widget:', commonProps)
+    console.log('🎨 Common props for widget:', commonProps)
+    console.log('🎨 Real-time data for widget:', realTimeData)
 
     let renderedWidget
     switch (widget.type) {
       case 'gauge':
-        renderedWidget = <GaugeWidget key={widget.id} {...commonProps} value={50} />
+        const gaugeValue = realTimeData.data?.value || realTimeData.data || 50
+        renderedWidget = <GaugeWidget 
+          key={widget.id} 
+          {...commonProps} 
+          value={gaugeValue}
+          min={widget.minValue || widget.min || 0}
+          max={widget.maxValue || widget.max || 100}
+          unit={widget.unit || '%'}
+          color={widget.color || '#ef4444'}
+          // CRITICAL: Pass MQTT topic for real-time updates
+          topic={widget.mqttTopic}
+          valuePath={widget.valuePath}
+        />
         break
       case 'chart':
-        renderedWidget = <ChartWidget key={widget.id} {...commonProps} autoGenerate={true} />
+        const chartData = realTimeData.data || []
+        renderedWidget = <ChartWidget 
+          key={widget.id} 
+          {...commonProps}
+          chartType={widget.chartType || 'line'}
+          color={widget.color || '#ef4444'}
+          // CRITICAL: Pass MQTT topic for real-time ECharts updates
+          topic={widget.mqttTopic}
+          valuePath={widget.valuePath}
+        />
         break
       case 'map':
-        renderedWidget = <MapWidget key={widget.id} {...commonProps} devices={[]} />
+        const mapDevices = realTimeData.data?.devices || realTimeData.data || []
+        renderedWidget = <MapWidget key={widget.id} {...commonProps} devices={mapDevices} />
         break
       case 'notification':
-        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} notifications={[]} setNotifications={() => {}} />
+        const notifications = realTimeData.data?.notifications || realTimeData.data || []
+        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} notifications={notifications} setNotifications={() => {}} />
         break
       case 'toggle':
-        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} isOn={false} setIsOn={() => {}} />
+        const toggleState = realTimeData.data?.isOn || realTimeData.data || false
+        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} isOn={toggleState} setIsOn={() => {}} />
         break
       case 'sensor':
       case 'sensor-tile':
-        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} value={25} />
+        const sensorValue = realTimeData.data?.value || realTimeData.data || 25
+        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} value={sensorValue} />
         break
       case 'slider':
-        renderedWidget = <SliderWidget key={widget.id} {...commonProps} value={50} setValue={() => {}} />
+        const sliderValue = realTimeData.data?.value || realTimeData.data || 50
+        renderedWidget = <SliderWidget key={widget.id} {...commonProps} value={sliderValue} setValue={() => {}} />
         break
       case 'model3d':
       case '3d-model':
-        renderedWidget = <Model3DWidget key={widget.id} {...commonProps} />
+        const modelData = realTimeData.data || {}
+        renderedWidget = <Model3DWidget key={widget.id} {...commonProps} data={modelData} />
         break
       default:
         renderedWidget = (
@@ -245,7 +347,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     
     console.log('🔍 Rendered widget:', renderedWidget)
     return renderedWidget
-  }, [])
+  }, [widgetData])
 
   // Loading state
   if (isLoading) {
@@ -366,27 +468,109 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
       dashboardData: dashboardData
     })
 
-    // Convert widgets to grid items with responsive dimensions
-    const gridItems = widgets.map(widget => {
-      const dimensions = calculateWidgetDimensions(widget)
-      return {
+    // Convert widgets to simple items for display (no complex positioning needed)
+    const gridItems = widgets.map((widget, index) => {
+      // Create a simple widget item for the new layout
+      const simpleItem = {
         ...widget,
-        ...dimensions,
-        i: widget.i || widget.id, // Ensure 'i' property exists for grid layout
-        x: widget.x || 0,
-        y: widget.y || 0
+        i: widget.i || widget.id || `widget-${index}`, // Ensure unique ID
+        id: widget.id || widget.i || `widget-${index}`,
+        type: widget.type,
+        title: widget.title || widget.type,
+        // Keep original properties for widget rendering
+        config: widget.config || {},
+        data: widget.data || {},
+        // Add index for display order
+        displayIndex: index
       }
+      console.log(`🔍 Converting widget ${widget.id} (index ${index}):`, {
+        original: widget,
+        simpleItem: simpleItem
+      })
+      return simpleItem
     })
 
     console.log('🔍 Grid items after conversion:', gridItems)
+    console.log('🔍 Grid items count:', gridItems.length)
 
-    // Auto-fix overlaps for better layout
-    const fixedItems = autoFixOverlaps(gridItems, { cols: 12, rowHeight: 80 })
+    // Use the simple grid items directly (no complex positioning needed)
+    const displayItems = gridItems
     
-    console.log('🔍 Fixed items after overlap fix:', fixedItems)
+    console.log('🔍 Display items:', displayItems)
+    console.log('🔍 Display items count:', displayItems.length)
+    console.log('🔍 Widget types:', displayItems.map(item => ({
+      id: item.i,
+      type: item.type,
+      title: item.title,
+      index: item.displayIndex
+    })))
 
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Debug Info Toggle */}
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={() => setShowDebugInfo(!showDebugInfo)}
+            className="bg-gray-800 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
+          >
+            {showDebugInfo ? 'Hide Debug' : 'Show Debug'}
+          </button>
+        </div>
+
+        {/* Debug Info Panel */}
+        {showDebugInfo && (
+          <div className="absolute top-12 right-4 z-10 bg-black bg-opacity-90 text-white p-4 rounded-lg text-xs max-w-sm">
+            <h3 className="font-bold mb-2">🔧 Debug Info</h3>
+            <div className="space-y-1">
+              <div>📡 MQTT Status: {connectionStatus.isConnected ? '✅ Connected' : '❌ Disconnected'}</div>
+              <div>🔗 Panel ID: {panelId}</div>
+              <div>🎯 Topic ID: {mqttTopic}</div>
+              <div>📊 Original Widgets: {widgets.length}</div>
+              <div>📊 Grid Items: {gridItems.length}</div>
+              <div>📊 Display Items: {displayItems.length}</div>
+              <div>🎯 Subscribed: {isSubscribed ? '✅ Yes' : '❌ No'}</div>
+              <div>🚀 Simulation: {dataSimulator.getStatus().isRunning ? '✅ Running' : '❌ Stopped'}</div>
+              <div>📈 Active Widgets: {dataSimulator.getStatus().activeWidgets.length}</div>
+              <div>🔍 Active Subscriptions: {connectionStatus.subscriptions?.length || 0}</div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-gray-600 space-y-2">
+              <button
+                onClick={() => runAllTests(panelId, dashboardData?.widgets || [])}
+                className="w-full bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
+              >
+                🧪 Run Tests
+              </button>
+              <button
+                onClick={() => {
+                  console.log('📡 MQTT Explorer Instructions:')
+                  console.log('1. Connect to: ws://test.mosquitto.org:8081')
+                  console.log('2. Publish to topic:', mqttTopic)
+                  console.log('3. Message format (use your actual widget IDs):')
+                  
+                  // Get actual widget IDs from dashboard data
+                  const widgetIds = dashboardData?.widgets?.map(w => w.id) || []
+                  const sampleMessage = {}
+                  
+                  widgetIds.forEach((widgetId, index) => {
+                    if (index === 0) {
+                      sampleMessage[widgetId] = {"value": 75, "unit": "%"}
+                    } else {
+                      sampleMessage[widgetId] = {"value": 30, "unit": "°C", "status": "normal"}
+                    }
+                  })
+                  
+                  console.log(JSON.stringify(sampleMessage, null, 2))
+                  console.log('4. Your widget IDs:', widgetIds)
+                  console.log('5. Your panel topic:', mqttTopic)
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-xs"
+              >
+                📡 Show MQTT Instructions
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Shared Dashboard Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -399,6 +583,21 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* MQTT Connection Status */}
+              <div className="flex items-center space-x-2">
+                {connectionStatus.isConnected ? (
+                  <div className="flex items-center text-green-600">
+                    <Wifi className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Live Data</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-gray-400">
+                    <WifiOff className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Offline</span>
+                  </div>
+                )}
+              </div>
+              
               <div className="text-sm text-gray-500">
                 {isMobile ? 'Mobile' : isTablet ? 'Tablet' : 'Desktop'} View
               </div>
@@ -422,29 +621,52 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
           </div>
         </div>
 
-        {/* Responsive Grid Layout for Shared Dashboard */}
-        <div className="shared-dashboard-grid">
-          {fixedItems.length > 0 ? (
-            <EnhancedGridLayout
-              className="layout"
-              widgets={fixedItems}
-              layouts={{ lg: fixedItems }}
-              breakpoints={gridConfig.breakpoints}
-              cols={gridConfig.cols}
-              rowHeight={gridConfig.rowHeight}
-              margin={gridConfig.margin}
-              containerPadding={gridConfig.containerPadding}
-              isDraggable={false}
-              isResizable={false}
-              isBounded={true}
-              preventCollision={true}
-              useCSSTransforms={true}
-              compactType="vertical"
-              renderWidget={renderWidget}
-              isPreviewMode={true}
-              showGridBackground={false}
-              showStatusBar={false}
-            />
+        {/* Simple Responsive Grid Layout for Shared Dashboard */}
+        <div className="shared-dashboard-grid p-6" style={{ minHeight: '800px' }}>
+          {displayItems.length > 0 ? (
+            <div className="space-y-6">
+              {/* Debug: Show widget count */}
+              <div className="mb-4 p-3 bg-blue-100 rounded-lg text-sm">
+                <strong>Dashboard Status:</strong> Displaying {displayItems.length} widgets
+              </div>
+              
+              {/* Simple responsive grid that works reliably */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {displayItems.map((widget, index) => (
+                  <div 
+                    key={widget.i || widget.id || index} 
+                    className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-200"
+                    style={{ minHeight: '300px' }}
+                  >
+                    {/* Widget Header */}
+                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900 capitalize">
+                          {widget.type}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-xs text-gray-500">Live</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Widget Content */}
+                    <div className="p-4 flex-1">
+                      {renderWidget(widget)}
+                    </div>
+                    
+                    {/* Widget Footer */}
+                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>ID: {widget.i || widget.id}</span>
+                        <span>Widget {index + 1}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="flex items-center justify-center min-h-96">
               <div className="text-center">
@@ -461,7 +683,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
                   <p>Debug info:</p>
                   <p>Widgets count: {widgets.length}</p>
                   <p>Grid items: {gridItems.length}</p>
-                  <p>Fixed items: {fixedItems.length}</p>
+                  <p>Display items: {displayItems.length}</p>
                 </div>
               </div>
             </div>

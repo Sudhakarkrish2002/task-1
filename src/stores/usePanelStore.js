@@ -24,13 +24,23 @@ export const usePanelStore = createWithEqualityFn(
           counter++
         }
         
-        // Generate a truly unique ID
+        // Generate a truly unique 15-digit topic ID (similar to backend format)
+        const generateUniqueTopicId = () => {
+          const timestamp = Date.now().toString()
+          const randomDigits = Math.floor(Math.random() * 90 + 10).toString() // 10-99
+          const topicId = timestamp + randomDigits
+          return topicId.substring(0, 15).padEnd(15, '0') // Ensure 15 digits
+        }
+        
+        // Generate a unique panel ID
         const generateUniqueId = () => {
           return `panel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         }
         
         const newPanel = {
           id: panelData.id || generateUniqueId(),
+          // CRITICAL: Generate unique topic ID for MQTT communication
+          topicId: panelData.topicId || generateUniqueTopicId(),
           name: panelName,
           widgets: panelData.widgets || [],
           layout: panelData.layout || {},

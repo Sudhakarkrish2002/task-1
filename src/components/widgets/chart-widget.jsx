@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useAutoValue } from '../../hooks/useAutoValue'
-import { useMqttTopic } from '../../hooks/useMqttTopic'
+import { useRealtimeData } from '../../hooks/useRealtimeData'
+import * as echarts from 'echarts'
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -22,99 +22,136 @@ const useIsMobile = () => {
 export const ChartWidget = ({ 
   widgetId,
   title = 'Chart',
-  chartType = 'bar',
+  chartType = 'line', // line, bar, area
   color = '#ef4444',
   panelId = 'default',
-  autoGenerate = true,
-  // Optional MQTT wiring
+  // MQTT wiring - REQUIRED for real-time data
   topic,
   valuePath
 }) => {
-  const { value: autoData, connected: autoConnected, deviceInfo } = useAutoValue(
-    widgetId, 
-    'chart', 
-    { chartType }, 
-    panelId, 
-    autoGenerate
-  )
-  const { value: liveValue, history: liveHistory, connected: mqttConnected } = useMqttTopic(topic, { valuePath, historySize: 40 })
-  const connected = autoConnected || mqttConnected
-  // Prefer MQTT values when available; otherwise fall back to auto-generated
+  const { value: liveValue, history: liveHistory, connected: realtimeConnected } = useRealtimeData(topic, { valuePath, historySize: 40 })
+  const connected = realtimeConnected
+  
+  // Use only real-time WebSocket data
   const data = useMemo(() => {
     if (liveHistory && liveHistory.length > 0) return liveHistory
     if (typeof liveValue === 'number') return [liveValue]
-    return autoData
-  }, [liveHistory, liveValue, autoData])
-  const canvasRef = useRef(null)
+    return []
+  }, [liveHistory, liveValue])
+  
+  const chartRef = useRef(null)
+  const chartInstance = useRef(null)
   const isMobile = useIsMobile()
 
   // Validate data
-  const safeData = Array.isArray(data) && data.length > 0 ? data : [10, 20, 30, 40, 50, 60, 70, 80]
+  const safeData = Array.isArray(data) && data.length > 0 ? data : []
   const validData = safeData.filter(val => typeof val === 'number' && !isNaN(val))
 
-  // Draw chart
+  // Initialize ECharts instance
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    if (!chartRef.current) return
 
-    const ctx = canvas.getContext('2d')
-    const rect = canvas.getBoundingClientRect()
-    
-    canvas.width = rect.width * window.devicePixelRatio
-    canvas.height = rect.height * window.devicePixelRatio
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+    // Initialize chart
+    chartInstance.current = echarts.init(chartRef.current)
 
-    const width = rect.width
-    const height = rect.height
-    const padding = isMobile ? 12 : 20
-    const chartWidth = width - (padding * 2)
-    const chartHeight = height - (padding * 2)
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height)
-
-    if (validData.length === 0) {
-      // Draw placeholder text
-      ctx.fillStyle = '#6b7280'
-      ctx.font = '14px Inter, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('No data available', width / 2, height / 2)
-      return
+    // Handle window resize
+    const handleResize = () => {
+      chartInstance.current?.resize()
     }
+    window.addEventListener('resize', handleResize)
 
-    // Draw bars
-    const barWidth = chartWidth / validData.length
-    const maxValue = Math.max(...validData)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      chartInstance.current?.dispose()
+      chartInstance.current = null
+    }
+  }, [])
 
-    validData.forEach((value, index) => {
-      const barHeight = (value / maxValue) * chartHeight
-      const x = padding + (index * barWidth)
-      const y = padding + chartHeight - barHeight
+  // Update chart with real-time data
+  useEffect(() => {
+    if (!chartInstance.current) return
 
-      // Bar
-      ctx.fillStyle = color
-      ctx.fillRect(x + 2, y, barWidth - 4, barHeight)
+    const hasData = validData.length > 0
 
-      // Value text
-      if (barHeight > (isMobile ? 20 : 15)) {
-        ctx.fillStyle = '#ffffff'
-        ctx.font = `${isMobile ? '12px' : '10px'} Inter, sans-serif`
-        ctx.textAlign = 'center'
-        ctx.fillText(value.toString(), x + barWidth / 2, y + barHeight / 2 + 3)
+    const option = {
+      animation: true,
+      animationDuration: 300,
+      grid: {
+        left: isMobile ? '12%' : '10%',
+        right: isMobile ? '8%' : '5%',
+        top: isMobile ? '15%' : '10%',
+        bottom: isMobile ? '15%' : '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: hasData ? validData.map((_, i) => `T${i + 1}`) : [],
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisLabel: { 
+          color: '#6b7280',
+          fontSize: isMobile ? 10 : 12,
+          interval: isMobile ? 'auto' : 0
+        },
+        splitLine: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisLabel: { 
+          color: '#6b7280',
+          fontSize: isMobile ? 10 : 12
+        },
+        splitLine: { 
+          lineStyle: { color: '#f3f4f6', type: 'dashed' }
+        }
+      },
+      series: [
+        {
+          name: title,
+          type: chartType === 'area' ? 'line' : chartType,
+          data: validData,
+          smooth: chartType === 'line' || chartType === 'area',
+          areaStyle: chartType === 'area' ? {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: color + '80' },
+              { offset: 1, color: color + '10' }
+            ])
+          } : undefined,
+          itemStyle: {
+            color: color,
+            borderRadius: chartType === 'bar' ? [4, 4, 0, 0] : 0
+          },
+          lineStyle: {
+            width: 2,
+            color: color
+          },
+          emphasis: {
+            focus: 'series',
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: color
+            }
+          },
+          label: {
+            show: false
+          }
+        }
+      ],
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        textStyle: { color: '#374151', fontSize: isMobile ? 11 : 12 },
+        axisPointer: {
+          type: 'line',
+          lineStyle: { color: color, width: 2 }
+        }
       }
-    })
-
-    // Draw grid lines
-    ctx.strokeStyle = '#f3f4f6'
-    ctx.lineWidth = 1
-    for (let i = 0; i <= 4; i++) {
-      const y = padding + (chartHeight / 4) * i
-      ctx.beginPath()
-      ctx.moveTo(padding, y)
-      ctx.lineTo(padding + chartWidth, y)
-      ctx.stroke()
     }
-  }, [data, color])
+
+    chartInstance.current.setOption(option, true)
+  }, [validData, chartType, color, title, isMobile])
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
@@ -132,18 +169,28 @@ export const ChartWidget = ({
         </div>
       </div>
       
-      {/* Chart */}
+      {/* Chart - ECharts */}
       <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'} bg-gradient-to-b from-white to-gray-50`}>
         <div className="relative h-full">
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full drop-shadow-sm"
-            style={{ minHeight: isMobile ? '120px' : '140px' }}
+          <div
+            ref={chartRef}
+            className="w-full h-full"
+            style={{ minHeight: isMobile ? '150px' : '180px' }}
           />
           {/* Chart overlay info */}
+          {validData.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-gray-400 text-sm font-medium">No data available</div>
+                <div className="text-gray-300 text-xs mt-1">
+                  {topic ? 'Waiting for MQTT data...' : 'Configure MQTT topic'}
+                </div>
+              </div>
+            </div>
+          )}
           <div className={`absolute ${isMobile ? 'top-1 right-1' : 'top-2 right-2'} bg-white/90 backdrop-blur-sm rounded-lg ${isMobile ? 'px-1 py-0.5' : 'px-2 py-1'}`}>
             <div className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-600`}>
-              {validData.length} data points
+              {validData.length} points
             </div>
           </div>
         </div>
@@ -152,27 +199,31 @@ export const ChartWidget = ({
       {/* Footer */}
       <div className={`${isMobile ? 'px-3 pb-3' : 'px-4 pb-4'} bg-gradient-to-r from-gray-50 to-white`}>
         <div className="flex items-center justify-between">
-          <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-600 font-medium truncate`}>
-            {deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
+          <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-600 font-medium truncate flex items-center gap-1`}>
+            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
+            {topic ? `ECharts ${chartType.charAt(0).toUpperCase() + chartType.slice(1)}` : 'No MQTT Topic'}
           </div>
           <div className="flex items-center space-x-2">
             <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
-              Max: {validData.length > 0 ? Math.max(...validData) : 0}
+              {validData.length > 0 ? (
+                <>Min: {Math.min(...validData).toFixed(1)} | Max: {Math.max(...validData).toFixed(1)}</>
+              ) : (
+                'No data'
+              )}
             </div>
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
           </div>
         </div>
-        {/* Chart type indicator */}
-        <div className={`${isMobile ? 'mt-1' : 'mt-2'} flex items-center justify-between`}>
-          <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
-            {chartType.toUpperCase()} CHART
+        {/* Real-time indicator */}
+        {topic && (
+          <div className={`${isMobile ? 'mt-1' : 'mt-2'} flex items-center justify-between`}>
+            <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-400`}>
+              Topic: {topic}
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="text-xs text-gray-400">MQTT → WS → ECharts</div>
+            </div>
           </div>
-          <div className="flex space-x-1">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className={`${isMobile ? 'w-0.5 h-2' : 'w-1 h-3'} bg-blue-500 rounded-full opacity-60`}></div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

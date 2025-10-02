@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { Bell, AlertTriangle, CheckCircle, Info, X, Eye } from 'lucide-react'
-import { useMqttTopic } from '../../hooks/useMqttTopic'
+import { useRealtimeData } from '../../hooks/useRealtimeData'
 
 export const NotificationWidget = ({ 
   widgetId,
@@ -21,8 +21,8 @@ export const NotificationWidget = ({
   const safeNotifications = Array.isArray(notifications) ? notifications : []
 
   // Subscribe to notification topic; push new entries when a message arrives
-  const { lastMessage, connected: mqttConnected } = useMqttTopic(topic, { enabled: !!topic })
-  const effectiveConnected = connected || mqttConnected
+  const { lastMessage, connected: realtimeConnected } = useRealtimeData(topic, { enabled: !!topic })
+  const effectiveConnected = connected || realtimeConnected
   useEffect(() => {
     if (!topic || !lastMessage) return
     const extract = (obj, path) => {
