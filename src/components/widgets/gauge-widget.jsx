@@ -41,6 +41,19 @@ export const GaugeWidget = ({
   const effectiveConnected = connected || realtimeConnected
   const effectiveValue = useMemo(() => (liveValue != null ? liveValue : value), [liveValue, value])
 
+  // Debug logging
+  useEffect(() => {
+    console.log(`🔧 Gauge Widget Debug:`, {
+      widgetId,
+      topic,
+      valuePath,
+      liveValue,
+      effectiveValue,
+      connected: effectiveConnected,
+      realtimeConnected
+    })
+  }, [widgetId, topic, valuePath, liveValue, effectiveValue, effectiveConnected, realtimeConnected])
+
   // Validate values to prevent errors
   const safeValue = typeof effectiveValue === 'number' && !isNaN(effectiveValue) ? effectiveValue : 0
   const safeMin = typeof min === 'number' && !isNaN(min) ? min : 0

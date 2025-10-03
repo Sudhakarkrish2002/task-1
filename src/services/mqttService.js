@@ -38,11 +38,11 @@ class MQTTService {
     this.connectionAttempted = true
 
     const defaultOptions = {
-      host: '71123c109076412ebb47f6ede49445f3.s1.eu.hivemq.cloud',
-      port: 8884, // Use 8080 for WebSocket connection
+      host: 'a5d3408f41574f459d3bb622b8dd644f.s1.eu.hivemq.cloud',
+      port: 8884, // Use 8884 for WebSocket connection
       protocol: 'wss',
-      username: 'hivemq.webclient.1759407250715',
-      password: 'p6H&Z>8EwbDCy7aP.,1r',
+      username: 'hivemq.webclient.1759471549473',
+      password: 'DS&OkA2w0yET>18%f:ur',
       clientId: `iot-dashboard-${Math.random().toString(16).substr(2, 8)}`,
       clean: true,
       reconnectPeriod: 1000, // Disable auto-reconnect, we'll handle it manually

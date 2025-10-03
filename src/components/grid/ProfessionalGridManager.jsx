@@ -84,7 +84,10 @@ export const ProfessionalGridManager = ({
               max={widget.maxValue || 100}
               unit={widget.data?.unit || '%'}
               color="#ef4444"
-              value={50}
+              value={0} // Default value, will be overridden by MQTT
+              // MQTT configuration
+              topic={widget.mqttTopic}
+              valuePath={widget.valuePath}
             />
           )
         case 'chart':
@@ -94,6 +97,9 @@ export const ProfessionalGridManager = ({
               chartType="bar"
               color="#ef4444"
               autoGenerate={true}
+              // MQTT configuration
+              topic={widget.mqttTopic}
+              valuePath={widget.valuePath}
             />
           )
         case 'toggle':
@@ -136,6 +142,9 @@ export const ProfessionalGridManager = ({
             <SimpleSensorWidget
               {...commonProps}
               value={25}
+              // MQTT configuration
+              topic={widget.mqttTopic}
+              valuePath={widget.valuePath}
             />
           )
         case '3d-model':
@@ -367,15 +376,21 @@ export const ProfessionalGridManager = ({
 
   // Handle widget update
   const handleWidgetUpdate = useCallback((widgetId, updates) => {
-    const updatedWidgets = widgets.map(w => 
-      w.id === widgetId ? { ...w, ...updates } : w
-    )
+    const updatedWidgets = widgets.map(w => {
+      if (w.id === widgetId) {
+        const updatedWidget = { ...w, ...updates }
+        // Update the render function to include new MQTT configuration
+        updatedWidget.render = getWidgetRenderer(updatedWidget.type)
+        return updatedWidget
+      }
+      return w
+    })
     setWidgets(updatedWidgets)
     
     if (onWidgetsChange) {
       onWidgetsChange(updatedWidgets)
     }
-  }, [widgets, onWidgetsChange])
+  }, [widgets, onWidgetsChange, getWidgetRenderer])
 
   // Handle widget settings
   const handleWidgetSettings = useCallback((widget) => {
@@ -388,6 +403,9 @@ export const ProfessionalGridManager = ({
       maxValue: widget.maxValue || 100,
       dataChannelId: widget.dataChannelId || 0,
       customDataChannelId: widget.customDataChannelId || '',
+      // MQTT configuration
+      mqttTopic: widget.mqttTopic || '',
+      valuePath: widget.valuePath || '',
       ...widget // Include any additional properties
     })
     setShowWidgetSettings(true)
@@ -624,6 +642,44 @@ export const ProfessionalGridManager = ({
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="100"
                     />
+                  </div>
+                </div>
+
+                {/* MQTT Configuration Section */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    MQTT Configuration (Real-time Data)
+                  </h4>
+                  
+                  {/* MQTT Topic */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">MQTT Topic</label>
+                    <input
+                      type="text"
+                      value={widgetSettings.mqttTopic || ''}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, mqttTopic: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                      placeholder="e.g. system/status, home/livingroom/temperature"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Set the MQTT topic to receive real-time data. Use <code className="bg-gray-100 px-1 rounded">system/status</code> for system status updates.
+                    </p>
+                  </div>
+
+                  {/* Value Path for JSON payloads */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Value Path (JSON) - Optional</label>
+                    <input
+                      type="text"
+                      value={widgetSettings.valuePath || ''}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, valuePath: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                      placeholder="e.g. payload.temp (leave empty for simple numbers)"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Leave empty for plain numeric payloads (e.g., 30). Use for JSON objects like <code className="bg-gray-100 px-1 rounded">sensor.temperature</code>.
+                    </p>
                   </div>
                 </div>
 
