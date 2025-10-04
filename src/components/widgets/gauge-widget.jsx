@@ -80,29 +80,43 @@ export const GaugeWidget = ({
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    // Background arc
+    // Calculate percentage for filling
+    const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
+    
+    // Background arc (unfilled portion)
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
     ctx.lineWidth = isMobile ? 16 : 12 // Thicker line for mobile
     ctx.strokeStyle = '#e5e7eb'
     ctx.stroke()
 
-    // Value arc
-    const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
-    const angle = Math.PI + (percentage * Math.PI)
+    // Value arc (filled portion) - draw from left to right based on percentage
+    const startAngle = Math.PI // Start from left (180 degrees)
+    const endAngle = Math.PI + (percentage * Math.PI) // End based on percentage
     
     ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, Math.PI, angle)
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle)
     ctx.lineWidth = isMobile ? 16 : 12 // Thicker line for mobile
     ctx.strokeStyle = color
     ctx.stroke()
+    
+    // Add a filled circle at the end of the arc to show completion
+    if (percentage > 0) {
+      const endX = centerX + radius * Math.cos(endAngle)
+      const endY = centerY + radius * Math.sin(endAngle)
+      
+      ctx.beginPath()
+      ctx.arc(endX, endY, (isMobile ? 8 : 6), 0, 2 * Math.PI)
+      ctx.fillStyle = color
+      ctx.fill()
+    }
 
     // Title text only (value is shown in overlay)
     ctx.fillStyle = '#6b7280'
     ctx.font = `${isMobile ? '14px' : '12px'} Inter, sans-serif` // Larger font for mobile
     ctx.textAlign = 'center'
     ctx.fillText(title, centerX, centerY + (isMobile ? 20 : 15))
-  }, [value, min, max, unit, color, title, isMobile])
+  }, [safeValue, min, max, unit, color, title, isMobile])
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
@@ -158,8 +172,12 @@ export const GaugeWidget = ({
         {/* Progress bar */}
         <div className={`${isMobile ? 'mt-2' : 'mt-2'} w-full bg-gray-200 rounded-full ${isMobile ? 'h-2' : 'h-1'}`}>
           <div 
-            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
-            style={{ width: `${percentage}%`, height: isMobile ? '8px' : '4px' }}
+            className="rounded-full transition-all duration-500"
+            style={{ 
+              width: `${percentage}%`, 
+              height: isMobile ? '8px' : '4px',
+              backgroundColor: color
+            }}
           ></div>
         </div>
       </div>
