@@ -322,7 +322,8 @@ function CreatePanel() {
             unit: widget.unit,
             chartType: widget.chartType,
             modelType: widget.modelType,
-            mqttTopic: widget.mqttTopic
+            mqttTopic: widget.mqttTopic,
+            valuePath: widget.valuePath  // CRITICAL: Include valuePath for MQTT data extraction
           }
         }
         
@@ -532,8 +533,8 @@ function CreatePanel() {
         widgets: gridData?.widgets || [],
         layouts: gridData?.layouts || {}, // Fixed: was layout, should be layouts
         deviceCount: gridData?.widgets?.length || 0,
-        stats: gridData?.stats || { totalWidgets: 0, gridUtilization: 0 },
-        createdAt: currentPanel?.createdAt || new Date().toISOString()
+        stats: gridData?.stats || { totalWidgets: 0, gridUtilization: 0 }
+        // Note: createdAt is handled by backend, not sent from frontend
       }
       
       // Helper function to generate topic ID if not available

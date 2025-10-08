@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Lock, Eye, Copy, Check, Wifi, WifiOff } from 'lucide-react'
 import { EnhancedGridLayout } from './grid/EnhancedGridLayout'
 import { Button } from './ui/button'
@@ -13,10 +13,7 @@ import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
 import sharingService from '../services/sharingService'
 import dashboardService from '../services/dashboardService'
-import { usePanelMqtt } from '../hooks/usePanelMqtt'
-import widgetDataService from '../services/widgetDataService'
-import dataSimulator from '../services/dataSimulator'
-import { runAllTests } from '../utils/mqttTest'
+import mqttService from '../services/mqttService'
 import './SharedDashboardView.css'
 
 // Device detection hook for responsive behavior
@@ -59,66 +56,53 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [widgetData, setWidgetData] = useState({})
-  const [showDebugInfo, setShowDebugInfo] = useState(false)
+  const [mqttConnected, setMqttConnected] = useState(false)
   const { isMobile, isTablet, isDesktop } = useDeviceType()
-  
-  // Initialize MQTT for real-time data using topicId
-  // Use topicId if available, otherwise fallback to panelId
-  const mqttTopic = dashboardData?.topicId || panelId
-  const { isSubscribed, connectionStatus } = usePanelMqtt(mqttTopic)
 
-  // Start data simulation when dashboard is loaded (only if no real data is coming)
+  // CRITICAL FIX: Establish MQTT connection when authenticated
+  // This is the ONLY MQTT setup needed - widgets will handle their own subscriptions
   useEffect(() => {
-    if (dashboardData && dashboardData.widgets && isAuthenticated) {
-      console.log('🚀 Dashboard loaded - waiting for real MQTT data...')
-      console.log('📊 Widgets to monitor:', dashboardData.widgets)
-      
-      // Don't start auto-simulation - wait for real MQTT data from MQTT Explorer
-      // The widgets will show offline until real data arrives
-      console.log('⏳ Waiting for real MQTT data from MQTT Explorer...')
-      console.log('📡 Panel topic to publish to:', mqttTopic)
-      console.log('📡 Panel ID:', panelId)
-      console.log('📡 Topic ID:', dashboardData?.topicId)
+    if (!isAuthenticated) {
+      setMqttConnected(false)
+      return
     }
 
-    // Cleanup simulation on unmount
-    return () => {
-      if (panelId) {
-        console.log('🛑 Stopping any active simulation for panel:', panelId)
-        dataSimulator.stopPanelSimulation(panelId)
-      }
-    }
-  }, [dashboardData, isAuthenticated, panelId])
+    const connectMqtt = async () => {
+      try {
+        console.log('🔌 SharedDashboard: Connecting to MQTT...')
+        
+        // Check if already connected
+        if (mqttService.isConnected) {
+          console.log('✅ SharedDashboard: MQTT already connected')
+          setMqttConnected(true)
+          return
+        }
 
-  // Handle real-time widget data updates
-  useEffect(() => {
-    if (!mqttTopic || !isAuthenticated) return
-
-    const handleWidgetUpdate = (event) => {
-      const { panelId: eventPanelId, widgetId, data } = event.detail
-      
-      // Match both panelId and topicId for compatibility
-      if (eventPanelId === panelId || eventPanelId === mqttTopic) {
-        console.log(`🎯 Real-time update for widget ${widgetId}:`, data)
-        setWidgetData(prev => ({
-          ...prev,
-          [widgetId]: {
-            ...prev[widgetId],
-            data: data,
-            lastUpdated: new Date().toISOString(),
-            isConnected: true
-          }
-        }))
+        // Connect to MQTT
+        await mqttService.connect()
+        console.log('✅ SharedDashboard: MQTT connected successfully')
+        console.log('📊 Widgets will now handle their own subscriptions via useRealtimeData hook')
+        setMqttConnected(true)
+      } catch (error) {
+        console.error('❌ SharedDashboard: Failed to connect to MQTT:', error)
+        setMqttConnected(false)
+        
+        // Retry after 3 seconds
+        setTimeout(() => {
+          console.log('🔄 SharedDashboard: Retrying MQTT connection...')
+          mqttService.resetConnectionAttempt()
+          connectMqtt()
+        }, 3000)
       }
     }
 
-    window.addEventListener('mqtt-widget-update', handleWidgetUpdate)
+    connectMqtt()
     
+    // Cleanup on unmount
     return () => {
-      window.removeEventListener('mqtt-widget-update', handleWidgetUpdate)
+      console.log('🧹 SharedDashboard: Component unmounting')
     }
-  }, [mqttTopic, panelId, isAuthenticated])
+  }, [isAuthenticated])
 
   // Load dashboard data
   useEffect(() => {
@@ -131,10 +115,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
           const apiResult = await dashboardService.getSharedDashboard(panelId)
           if (apiResult && apiResult.success !== false) {
             const dashboard = apiResult.dashboard || apiResult
-            console.log('🔍 SharedDashboardView - Loaded data from backend:', dashboard)
-            console.log('🔍 Widgets count:', dashboard.widgets?.length || 0)
-            console.log('🔍 Layouts:', dashboard.layouts)
-            console.log('🔍 Widgets data:', dashboard.widgets)
+            console.log('🔍 SharedDashboardView - Loaded data from backend:', dashboard.title)
 
             const normalizedData = {
               ...dashboard,
@@ -145,7 +126,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
             return
           }
         } catch (apiError) {
-          console.log('Backend API not available, trying local sources:', apiError)
+          console.log('Backend API not available, trying local sources')
         }
         
         // Try to get from sharing service
@@ -170,10 +151,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         const storedData = localStorage.getItem(`published-${panelId}`)
         if (storedData) {
           const data = JSON.parse(storedData)
-          console.log('🔍 SharedDashboardView - Loaded data from localStorage:', data)
-          console.log('🔍 Widgets count:', data.widgets?.length || 0)
-          console.log('🔍 Layouts:', data.layouts)
-          console.log('🔍 Widgets data:', data.widgets)
+          console.log('🔍 SharedDashboardView - Loaded data from localStorage:', data.title)
           
           // Normalize the data structure
           const normalizedData = {
@@ -204,18 +182,31 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
   const handlePasswordSubmit = useCallback((e) => {
     e.preventDefault()
     
+    console.log('🔐 Password authentication attempt:', {
+      enteredPassword: password,
+      expectedPassword: dashboardData?.sharePassword,
+      dashboardData: dashboardData
+    })
+    
     if (!dashboardData) {
+      console.error('❌ Dashboard data not available for authentication')
       setError('Dashboard data not available')
       return
     }
 
     if (password === dashboardData.sharePassword) {
+      console.log('✅ Password authentication successful')
       setIsAuthenticated(true)
       setError('')
       if (onAccessGranted) {
         onAccessGranted(dashboardData)
       }
     } else {
+      console.log('❌ Password authentication failed:', {
+        entered: password,
+        expected: dashboardData.sharePassword,
+        match: password === dashboardData.sharePassword
+      })
       setError('Invalid password')
     }
   }, [password, dashboardData, onAccessGranted])
@@ -259,95 +250,124 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     }
   }, [])
 
-  // Render widget based on type
+  // Render widget based on type - EXACTLY like normal dashboard
+  // Widgets handle their own MQTT subscriptions via useRealtimeData hook
   const renderWidget = useCallback((widget) => {
-    console.log('🎨 Rendering widget:', widget)
-    console.log('🎨 Widget ID:', widget.id || widget.i)
-    console.log('🎨 Widget type:', widget.type)
-    console.log('🎨 Widget position:', { x: widget.x, y: widget.y, w: widget.w, h: widget.h })
+    // CRITICAL: Extract MQTT topic from widget config
+    // This is the SAME approach as in CreatePanel.jsx
+    const widgetMqttTopic = widget.config?.mqttTopic || widget.mqttTopic
+    const widgetValuePath = widget.config?.valuePath || widget.valuePath
     
-    // Get real-time data for this widget
-    const realTimeData = widgetData[widget.id] || {}
-    const isConnected = realTimeData.isConnected || false
-    const lastUpdated = realTimeData.lastUpdated
+    console.log(`📊 Rendering widget ${widget.id}:`, {
+      type: widget.type,
+      topic: widgetMqttTopic,
+      valuePath: widgetValuePath,
+      config: widget.config
+    })
     
     const commonProps = {
       widgetId: widget.id,
       title: widget.title || widget.type,
-      connected: isConnected,
-      deviceInfo: null,
-      lastUpdated: lastUpdated
+      connected: mqttConnected,
+      deviceInfo: null
     }
 
-    console.log('🎨 Common props for widget:', commonProps)
-    console.log('🎨 Real-time data for widget:', realTimeData)
-
-    let renderedWidget
+    // Render widgets EXACTLY like in CreatePanel.jsx
     switch (widget.type) {
       case 'gauge':
-        const gaugeValue = realTimeData.data?.value || realTimeData.data || 50
-        renderedWidget = <GaugeWidget 
+        return <GaugeWidget 
           key={widget.id} 
           {...commonProps} 
-          value={gaugeValue}
-          min={widget.minValue || widget.min || 0}
-          max={widget.maxValue || widget.max || 100}
-          unit={widget.unit || '%'}
-          color={widget.color || '#ef4444'}
-          // CRITICAL: Pass MQTT topic for real-time updates
-          topic={widget.mqttTopic}
-          valuePath={widget.valuePath}
+          value={0} // Default value, will be overridden by MQTT data via useRealtimeData
+          min={widget.config?.minValue || widget.minValue || widget.min || 0}
+          max={widget.config?.maxValue || widget.maxValue || widget.max || 100}
+          unit={widget.config?.unit || widget.unit || '%'}
+          color={widget.config?.color || widget.color || '#ef4444'}
+          // CRITICAL: Pass topic to widget - it will use useRealtimeData internally
+          topic={widgetMqttTopic}
+          valuePath={widgetValuePath}
         />
-        break
+      
       case 'chart':
-        const chartData = realTimeData.data || []
-        renderedWidget = <ChartWidget 
+        return <ChartWidget 
           key={widget.id} 
           {...commonProps}
-          chartType={widget.chartType || 'line'}
-          color={widget.color || '#ef4444'}
-          // CRITICAL: Pass MQTT topic for real-time ECharts updates
-          topic={widget.mqttTopic}
-          valuePath={widget.valuePath}
+          chartType={widget.config?.chartType || widget.chartType || 'line'}
+          color={widget.config?.color || widget.color || '#ef4444'}
+          // CRITICAL: Pass topic to widget - it will use useRealtimeData internally
+          topic={widgetMqttTopic}
+          valuePath={widgetValuePath}
         />
-        break
+      
       case 'map':
-        const mapDevices = realTimeData.data?.devices || realTimeData.data || []
-        renderedWidget = <MapWidget key={widget.id} {...commonProps} devices={mapDevices} />
-        break
+        return <MapWidget 
+          key={widget.id} 
+          {...commonProps} 
+          size="small"
+          mqttTopic={widgetMqttTopic}
+        />
+      
       case 'notification':
-        const notifications = realTimeData.data?.notifications || realTimeData.data || []
-        renderedWidget = <NotificationWidget key={widget.id} {...commonProps} notifications={notifications} setNotifications={() => {}} />
-        break
+        return <NotificationWidget 
+          key={widget.id} 
+          {...commonProps} 
+          notifications={[]} 
+          setNotifications={() => {}} 
+        />
+      
       case 'toggle':
-        const toggleState = realTimeData.data?.isOn || realTimeData.data || false
-        renderedWidget = <ToggleWidget key={widget.id} {...commonProps} isOn={toggleState} setIsOn={() => {}} />
-        break
+        return <ToggleWidget 
+          key={widget.id} 
+          {...commonProps} 
+          isOn={false} 
+          setIsOn={() => {}} 
+        />
+      
       case 'sensor':
       case 'sensor-tile':
-        const sensorValue = realTimeData.data?.value || realTimeData.data || 25
-        renderedWidget = <SimpleSensorWidget key={widget.id} {...commonProps} value={sensorValue} />
-        break
+        return <SimpleSensorWidget 
+          key={widget.id} 
+          {...commonProps} 
+          value={25} // Default value, will be overridden by MQTT data via useRealtimeData
+          unit={widget.config?.unit || widget.unit || '°C'}
+          min={widget.config?.minValue || widget.minValue || widget.min || 0}
+          max={widget.config?.maxValue || widget.maxValue || widget.max || 100}
+          // CRITICAL: Pass topic to widget - it will use useRealtimeData internally
+          topic={widgetMqttTopic}
+          valuePath={widgetValuePath}
+        />
+      
       case 'slider':
-        const sliderValue = realTimeData.data?.value || realTimeData.data || 50
-        renderedWidget = <SliderWidget key={widget.id} {...commonProps} value={sliderValue} setValue={() => {}} />
-        break
+        return <SliderWidget 
+          key={widget.id} 
+          {...commonProps} 
+          min={widget.config?.minValue || widget.minValue || widget.min || 0}
+          max={widget.config?.maxValue || widget.maxValue || widget.max || 100}
+          unit={widget.config?.unit || widget.unit || ''}
+          color={widget.config?.color || widget.color || '#ef4444'}
+          value={50} 
+          setValue={() => {}} 
+        />
+      
       case 'model3d':
       case '3d-model':
-        const modelData = realTimeData.data || {}
-        renderedWidget = <Model3DWidget key={widget.id} {...commonProps} data={modelData} />
-        break
+        return <Model3DWidget 
+          key={widget.id} 
+          {...commonProps} 
+          modelType={widget.modelType || 'cube'}
+          color={widget.color || '#3b82f6'}
+          size="small"
+          mqttTopic={widgetMqttTopic}
+        />
+      
       default:
-        renderedWidget = (
+        return (
           <div key={widget.id} className="p-4 bg-gray-100 rounded-lg text-center text-gray-500">
             Unknown widget type: {widget.type}
           </div>
         )
     }
-    
-    console.log('🔍 Rendered widget:', renderedWidget)
-    return renderedWidget
-  }, [widgetData])
+  }, [mqttConnected])
 
   // Loading state
   if (isLoading) {
@@ -398,6 +418,14 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
             <p className="text-gray-600">
               This dashboard is password protected. Enter the password to view.
             </p>
+            {/* Debug: Show password for testing */}
+            {dashboardData?.sharePassword && (
+              <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Debug:</strong> Password is: <code className="bg-yellow-200 px-1 rounded">{dashboardData.sharePassword}</code>
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -461,13 +489,6 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     const widgets = dashboardData.widgets || []
     const layouts = dashboardData.layouts || {}
 
-    console.log('🔍 Rendering dashboard with:', {
-      widgetsCount: widgets.length,
-      widgets: widgets,
-      layouts: layouts,
-      dashboardData: dashboardData
-    })
-
     // Convert widgets to simple items for display (no complex positioning needed)
     const gridItems = widgets.map((widget, index) => {
       // Create a simple widget item for the new layout
@@ -480,96 +501,26 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         // Keep original properties for widget rendering
         config: widget.config || {},
         data: widget.data || {},
+        // CRITICAL FIX: Extract MQTT topic and valuePath from config to top level for easier access
+        mqttTopic: widget.config?.mqttTopic || widget.mqttTopic || panelId,
+        valuePath: widget.config?.valuePath || widget.valuePath,
+        // Extract other config properties to top level
+        minValue: widget.config?.minValue || widget.minValue,
+        maxValue: widget.config?.maxValue || widget.maxValue,
+        unit: widget.config?.unit || widget.unit,
+        color: widget.config?.color || widget.color,
+        chartType: widget.config?.chartType || widget.chartType,
         // Add index for display order
         displayIndex: index
       }
-      console.log(`🔍 Converting widget ${widget.id} (index ${index}):`, {
-        original: widget,
-        simpleItem: simpleItem
-      })
       return simpleItem
     })
 
-    console.log('🔍 Grid items after conversion:', gridItems)
-    console.log('🔍 Grid items count:', gridItems.length)
-
     // Use the simple grid items directly (no complex positioning needed)
     const displayItems = gridItems
-    
-    console.log('🔍 Display items:', displayItems)
-    console.log('🔍 Display items count:', displayItems.length)
-    console.log('🔍 Widget types:', displayItems.map(item => ({
-      id: item.i,
-      type: item.type,
-      title: item.title,
-      index: item.displayIndex
-    })))
 
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Debug Info Toggle */}
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={() => setShowDebugInfo(!showDebugInfo)}
-            className="bg-gray-800 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
-          >
-            {showDebugInfo ? 'Hide Debug' : 'Show Debug'}
-          </button>
-        </div>
-
-        {/* Debug Info Panel */}
-        {showDebugInfo && (
-          <div className="absolute top-12 right-4 z-10 bg-black bg-opacity-90 text-white p-4 rounded-lg text-xs max-w-sm">
-            <h3 className="font-bold mb-2">🔧 Debug Info</h3>
-            <div className="space-y-1">
-              <div>📡 MQTT Status: {connectionStatus.isConnected ? '✅ Connected' : '❌ Disconnected'}</div>
-              <div>🔗 Panel ID: {panelId}</div>
-              <div>🎯 Topic ID: {mqttTopic}</div>
-              <div>📊 Original Widgets: {widgets.length}</div>
-              <div>📊 Grid Items: {gridItems.length}</div>
-              <div>📊 Display Items: {displayItems.length}</div>
-              <div>🎯 Subscribed: {isSubscribed ? '✅ Yes' : '❌ No'}</div>
-              <div>🚀 Simulation: {dataSimulator.getStatus().isRunning ? '✅ Running' : '❌ Stopped'}</div>
-              <div>📈 Active Widgets: {dataSimulator.getStatus().activeWidgets.length}</div>
-              <div>🔍 Active Subscriptions: {connectionStatus.subscriptions?.length || 0}</div>
-            </div>
-            <div className="mt-3 pt-2 border-t border-gray-600 space-y-2">
-              <button
-                onClick={() => runAllTests(panelId, dashboardData?.widgets || [])}
-                className="w-full bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
-              >
-                🧪 Run Tests
-              </button>
-              <button
-                onClick={() => {
-                  console.log('📡 MQTT Explorer Instructions:')
-                  console.log('1. Connect to: ws://test.mosquitto.org:8081')
-                  console.log('2. Publish to topic:', mqttTopic)
-                  console.log('3. Message format (use your actual widget IDs):')
-                  
-                  // Get actual widget IDs from dashboard data
-                  const widgetIds = dashboardData?.widgets?.map(w => w.id) || []
-                  const sampleMessage = {}
-                  
-                  widgetIds.forEach((widgetId, index) => {
-                    if (index === 0) {
-                      sampleMessage[widgetId] = {"value": 75, "unit": "%"}
-                    } else {
-                      sampleMessage[widgetId] = {"value": 30, "unit": "°C", "status": "normal"}
-                    }
-                  })
-                  
-                  console.log(JSON.stringify(sampleMessage, null, 2))
-                  console.log('4. Your widget IDs:', widgetIds)
-                  console.log('5. Your panel topic:', mqttTopic)
-                }}
-                className="w-full bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-xs"
-              >
-                📡 Show MQTT Instructions
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Shared Dashboard Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -585,15 +536,16 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
             <div className="flex items-center space-x-4">
               {/* MQTT Connection Status */}
               <div className="flex items-center space-x-2">
-                {connectionStatus.isConnected ? (
+                {mqttConnected ? (
                   <div className="flex items-center text-green-600">
                     <Wifi className="w-4 h-4 mr-1" />
                     <span className="text-sm">Live Data</span>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2"></div>
                   </div>
                 ) : (
                   <div className="flex items-center text-gray-400">
                     <WifiOff className="w-4 h-4 mr-1" />
-                    <span className="text-sm">Offline</span>
+                    <span className="text-sm">Connecting...</span>
                   </div>
                 )}
               </div>
@@ -623,11 +575,37 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
 
         {/* Simple Responsive Grid Layout for Shared Dashboard */}
         <div className="shared-dashboard-grid p-6" style={{ minHeight: '800px' }}>
+          {/* MQTT Connection Status */}
+          {!mqttConnected && isAuthenticated && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="font-semibold text-yellow-800">Connecting to live data...</span>
+              </div>
+              <p className="mt-2 text-yellow-700">Please wait while we establish the MQTT connection for real-time updates.</p>
+            </div>
+          )}
+          
           {displayItems.length > 0 ? (
             <div className="space-y-6">
-              {/* Debug: Show widget count */}
-              <div className="mb-4 p-3 bg-blue-100 rounded-lg text-sm">
-                <strong>Dashboard Status:</strong> Displaying {displayItems.length} widgets
+              {/* Dashboard Status */}
+              <div className="mb-4 p-3 bg-blue-100 rounded-lg text-sm flex items-center justify-between">
+                <div>
+                  <strong>Dashboard Status:</strong> Displaying {displayItems.length} widgets
+                </div>
+                <div className="flex items-center space-x-2">
+                  {mqttConnected ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-green-700 font-semibold">Live Data Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <span className="text-gray-600">Connecting...</span>
+                    </>
+                  )}
+                </div>
               </div>
               
               {/* Simple responsive grid that works reliably */}
@@ -638,30 +616,9 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
                     className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-200"
                     style={{ minHeight: '300px' }}
                   >
-                    {/* Widget Header */}
-                    <div className="p-4 border-b border-gray-100 bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900 capitalize">
-                          {widget.type}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-gray-500">Live</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Widget Content */}
-                    <div className="p-4 flex-1">
+                    {/* Widget Content - widgets handle their own headers and connection status */}
+                    <div className="h-full">
                       {renderWidget(widget)}
-                    </div>
-                    
-                    {/* Widget Footer */}
-                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>ID: {widget.i || widget.id}</span>
-                        <span>Widget {index + 1}</span>
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -707,3 +664,5 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
 }
 
 export default SharedDashboardView
+
+
