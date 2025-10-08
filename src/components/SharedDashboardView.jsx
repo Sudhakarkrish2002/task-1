@@ -71,6 +71,36 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
       try {
         console.log('🔌 SharedDashboard: Connecting to MQTT...')
         
+        // CRITICAL: Load cached MQTT values from localStorage BEFORE connecting
+        // This ensures shared dashboard shows last values immediately
+        console.log('📦 SharedDashboard: Loading cached MQTT values from localStorage...')
+        try {
+          const cacheData = localStorage.getItem('mqtt-cache')
+          if (cacheData) {
+            const cache = JSON.parse(cacheData)
+            const expiresAt = new Date(cache.expiresAt)
+            const now = new Date()
+            
+            if (now < expiresAt && cache.values) {
+              // Cache is still valid, restore it to mqttService
+              console.log(`💾 SharedDashboard: Found ${Object.keys(cache.values).length} cached MQTT values`)
+              Object.entries(cache.values).forEach(([topic, value]) => {
+                // Restore the cached value to mqttService
+                mqttService.lastValues.set(topic, value)
+                console.log(`✅ Restored cached value for topic ${topic}:`, value.value)
+              })
+              console.log('✅ SharedDashboard: Cached MQTT values restored successfully')
+            } else {
+              console.log('⚠️ SharedDashboard: MQTT cache expired, will wait for live data')
+              localStorage.removeItem('mqtt-cache')
+            }
+          } else {
+            console.log('ℹ️ SharedDashboard: No cached MQTT values found')
+          }
+        } catch (cacheError) {
+          console.error('❌ Error loading MQTT cache:', cacheError)
+        }
+        
         // Check if already connected
         if (mqttService.isConnected) {
           console.log('✅ SharedDashboard: MQTT already connected')

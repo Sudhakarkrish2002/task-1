@@ -13,6 +13,8 @@ class MQTTService {
     this.connectionTimeout = null
     this.isConnecting = false
     this.connectionAttempted = false
+    // CRITICAL: Store last values for each topic so shared dashboards can show them immediately
+    this.lastValues = new Map() // topic -> { value, timestamp, rawData }
   }
 
   // Connect to MQTT broker
@@ -172,6 +174,14 @@ class MQTTService {
   handleMessage(topic, data) {
     console.log('📨 Received MQTT message:', { topic, data })
     
+    // CRITICAL: Store last value for this topic so new subscribers get it immediately
+    this.lastValues.set(topic, {
+      value: data,
+      timestamp: new Date().toISOString(),
+      rawData: data
+    })
+    console.log(`💾 Stored last value for topic ${topic}:`, data)
+    
     // Parse panel-specific data format: {template_id: {widget_id: data, widget_id: data}}
     if (typeof data === 'object' && data !== null) {
       // Check if this is panel data format
@@ -260,6 +270,21 @@ class MQTTService {
       // Track subscription
       this.subscriptions.set(topic, handler)
 
+      // CRITICAL: If we have a last value for this topic, immediately deliver it to the handler
+      // This ensures shared dashboards show the last value immediately without waiting for new data
+      if (this.lastValues.has(topic)) {
+        const lastValue = this.lastValues.get(topic)
+        console.log(`🎯 Delivering cached last value for topic ${topic}:`, lastValue.value)
+        try {
+          // Deliver the last value immediately
+          handler(lastValue.value, topic)
+        } catch (error) {
+          console.error('Error delivering cached value:', error)
+        }
+      } else {
+        console.log(`ℹ️ No cached value available for topic ${topic}, will wait for new data`)
+      }
+
       console.log(`✅ Subscription setup complete for topic: ${topic}`)
       return true
     } catch (error) {
@@ -344,6 +369,17 @@ class MQTTService {
     return true
   }
 
+  // Get last value for a topic
+  getLastValue(topic) {
+    return this.lastValues.get(topic) || null
+  }
+
+  // Clear last values cache
+  clearLastValues() {
+    this.lastValues.clear()
+    console.log('🧹 Cleared last values cache')
+  }
+
   // Disconnect from MQTT broker
   disconnect() {
     if (this.client) {
@@ -358,13 +394,14 @@ class MQTTService {
     this.connectionAttempted = false // Reset connection attempt flag
     this.subscriptions.clear()
     this.messageHandlers.clear()
+    // Note: We keep lastValues cache even after disconnect so shared dashboards can still show last values
     
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout)
       this.connectionTimeout = null
     }
     
-    console.log('🔌 MQTT Disconnected')
+    console.log('🔌 MQTT Disconnected (last values cache preserved)')
   }
 
   // Subscribe to panel-specific topic (panel ID as topic)
@@ -430,7 +467,9 @@ class MQTTService {
       connectionAttempted: this.connectionAttempted,
       isSimulationMode: false,
       clientId: this.client?.options?.clientId,
-      subscriptions: Array.from(this.subscriptions.keys())
+      subscriptions: Array.from(this.subscriptions.keys()),
+      cachedTopics: Array.from(this.lastValues.keys()),
+      cachedValuesCount: this.lastValues.size
     }
   }
 

@@ -524,6 +524,49 @@ function CreatePanel() {
     try {
       console.log('Publishing dashboard with data:', gridData)
       
+      // CRITICAL: Capture current MQTT values from widgets and store them in mqttService cache
+      // This ensures shared dashboard shows the current values immediately
+      console.log('📊 Capturing current widget values for shared dashboard...')
+      const widgets = gridData?.widgets || []
+      let capturedValuesCount = 0
+      
+      widgets.forEach(widget => {
+        const widgetTopic = widget.config?.mqttTopic || widget.mqttTopic
+        if (widgetTopic && window.mqttService) {
+          // Check if we already have a cached value
+          const cachedValue = window.mqttService.getLastValue(widgetTopic)
+          if (cachedValue) {
+            console.log(`✅ Widget ${widget.id} topic ${widgetTopic} already has cached value:`, cachedValue.value)
+            capturedValuesCount++
+          } else {
+            console.log(`⚠️ Widget ${widget.id} topic ${widgetTopic} has no cached value yet`)
+          }
+        }
+      })
+      
+      console.log(`💾 Captured ${capturedValuesCount} widget values for shared dashboard`)
+      
+      // Store cached MQTT values in localStorage for cross-tab persistence
+      if (window.mqttService) {
+        const connectionStatus = window.mqttService.getConnectionStatus()
+        const cachedValues = {}
+        connectionStatus.cachedTopics.forEach(topic => {
+          const lastValue = window.mqttService.getLastValue(topic)
+          if (lastValue) {
+            cachedValues[topic] = lastValue
+          }
+        })
+        
+        // Store in localStorage with expiration (24 hours)
+        const cacheData = {
+          values: cachedValues,
+          timestamp: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        }
+        localStorage.setItem('mqtt-cache', JSON.stringify(cacheData))
+        console.log(`💾 Stored ${Object.keys(cachedValues).length} MQTT values in localStorage for shared dashboard`)
+      }
+      
       // Create panel data with the current grid state
       const panelToPublish = {
         id: currentPanel?.id || `demo-panel-${Date.now()}`,
