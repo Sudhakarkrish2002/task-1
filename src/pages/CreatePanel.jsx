@@ -370,9 +370,20 @@ function CreatePanel() {
           // Panel exists in backend, update it
           try {
             const result = await dashboardService.updateDashboard(currentPanel.id, panelData)
-            updatePanel(currentPanel.id, panelData)
-            savedPanel = { ...currentPanel, ...panelData }
+            // CRITICAL FIX: Don't update panel store with converted widgets
+            // This preserves MQTT subscriptions in the normal dashboard
+            // Only update metadata, not widgets
+            updatePanel(currentPanel.id, {
+              ...currentPanel,
+              name: panelData.name,
+              deviceCount: panelData.deviceCount,
+              stats: panelData.stats,
+              updatedAt: new Date().toISOString()
+              // DO NOT update widgets - keep original widget structure with mqttTopic
+            })
+            savedPanel = currentPanel // Keep current panel with original widgets
             console.log('Panel updated successfully in backend:', result)
+            console.log('✅ Preserved original widget MQTT configurations')
             alert('✅ Panel has been updated!')
             // Redirect to My Panels page after successful save
             setTimeout(() => {
@@ -387,10 +398,20 @@ function CreatePanel() {
           console.log('Panel not found in backend, creating new dashboard...')
           try {
             const createResult = await dashboardService.saveDashboard(panelData)
-            savedPanel = { ...currentPanel, ...panelData, id: createResult.dashboard.id }
+            // CRITICAL FIX: Only update metadata, preserve widget MQTT config
+            savedPanel = { 
+              ...currentPanel, 
+              id: createResult.dashboard.id,
+              name: panelData.name,
+              deviceCount: panelData.deviceCount,
+              stats: panelData.stats,
+              updatedAt: new Date().toISOString()
+              // DO NOT include panelData.widgets - keep original widget structure
+            }
             updatePanel(currentPanel.id, savedPanel)
             setCurrentPanel(savedPanel)
             console.log('Panel created successfully in backend:', createResult)
+            console.log('✅ Preserved original widget MQTT configurations')
             alert('✅ Panel has been saved!')
             // Redirect to My Panels page after successful save
             setTimeout(() => {
@@ -466,8 +487,17 @@ function CreatePanel() {
         
         let savedPanel
         if (currentPanel) {
-          updatePanel(currentPanel.id, fallbackPanelData)
-          savedPanel = { ...currentPanel, ...fallbackPanelData }
+          // CRITICAL FIX: Only update metadata, not widgets to preserve MQTT config
+          updatePanel(currentPanel.id, {
+            ...currentPanel,
+            name: fallbackPanelData.name,
+            deviceCount: fallbackPanelData.deviceCount,
+            stats: fallbackPanelData.stats,
+            updatedAt: new Date().toISOString()
+            // DO NOT update widgets - keep original with mqttTopic
+          })
+          savedPanel = currentPanel // Keep current panel with original widgets
+          console.log('✅ Preserved original widget MQTT configurations (localStorage)')
           alert('✅ Panel has been saved locally!')
           // Redirect to My Panels page after successful local save
           setTimeout(() => {
@@ -593,14 +623,16 @@ function CreatePanel() {
         const result = await dashboardService.publishDashboard(panelToPublish)
         console.log('Dashboard published via backend:', result)
         
-        // Update local panel with published status
+        // CRITICAL FIX: Update local panel with published status ONLY
+        // Don't overwrite widgets to preserve MQTT subscriptions in normal dashboard
         updatePanel(panelToPublish.id, { 
-          ...panelToPublish, 
+          ...currentPanel, // Keep current panel structure with original widgets
           isPublished: true, 
           publishedAt: result.dashboard.publishedAt,
           shareableLink: result.dashboard.shareableLink,
           sharePassword: result.dashboard.sharePassword,
           shareableId: result.dashboard.shareableId
+          // DO NOT include panelToPublish.widgets - keep original widget MQTT config
         })
         
         // Set sharing data for modal
@@ -612,6 +644,7 @@ function CreatePanel() {
         console.log('shareableLink:', result.dashboard.shareableLink)
         console.log('sharePassword:', result.dashboard.sharePassword)
         console.log('Published dashboard data:', panelToPublish)
+        console.log('✅ Preserved original widget MQTT configurations in normal dashboard')
         
         // Show sharing modal
         setShowSharingModal(true)
@@ -627,14 +660,16 @@ function CreatePanel() {
         const generatedLink = `${baseUrl}/shared/${shareableId}`
         const generatedPassword = Math.random().toString(36).substring(2, 8).toUpperCase()
         
-        // Update panel to published status with sharing info
+        // CRITICAL FIX: Update panel to published status with sharing info
+        // Preserve original widget structure with MQTT topics
         updatePanel(panelToPublish.id, { 
-          ...panelToPublish, 
+          ...currentPanel, // Keep current panel with original widgets
           isPublished: true, 
           publishedAt: new Date().toISOString(),
           shareableLink: generatedLink,
           sharePassword: generatedPassword,
           shareableId: shareableId
+          // DO NOT include panelToPublish.widgets - keep original widget MQTT config
         })
 
         // Save the published dashboard data for shared access
