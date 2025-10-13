@@ -74,7 +74,7 @@ export const Model3DWidget = ({
               perspective: '200px',
               overflow: 'visible',
               position: 'relative',
-              zIndex: 25
+              zIndex: 0
             }}
           >
             {/* Cube faces */}
@@ -112,7 +112,7 @@ export const Model3DWidget = ({
               boxShadow: `inset 0 0 20px ${color}20`,
               overflow: 'visible',
               position: 'relative',
-              zIndex: 25
+              zIndex: 0
             }}
           />
         )
@@ -128,7 +128,7 @@ export const Model3DWidget = ({
               height: '80px',
               overflow: 'visible',
               position: 'relative',
-              zIndex: 25
+              zIndex: 0
             }}
           >
             <div 
@@ -150,7 +150,7 @@ export const Model3DWidget = ({
               transition: isRotating ? 'none' : 'transform 0.3s ease',
               overflow: 'visible',
               position: 'relative',
-              zIndex: 25
+              zIndex: 0
             }}
           />
         )
@@ -166,14 +166,16 @@ export const Model3DWidget = ({
         height: '100%',
         overflow: 'visible',
         position: 'relative',
-        zIndex: 10
+        zIndex: 1
       }}
     >
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
         <div className="flex items-center space-x-1 flex-shrink-0">
-          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-500">Live</span>
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-xs font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
+            {connected ? 'Live' : 'Offline'}
+          </span>
         </div>
       </div>
       
@@ -184,7 +186,7 @@ export const Model3DWidget = ({
           height: 'auto',
           overflow: 'visible',
           position: 'relative',
-          zIndex: 5
+          zIndex: 0
         }}
       >
         {/* 3D Model Display */}
@@ -196,7 +198,7 @@ export const Model3DWidget = ({
             width: '100%',
             overflow: 'visible',
             position: 'relative',
-            zIndex: 15
+            zIndex: 0
           }}
         >
           <div 
@@ -205,7 +207,7 @@ export const Model3DWidget = ({
               transformStyle: 'preserve-3d',
               overflow: 'visible',
               position: 'relative',
-              zIndex: 20
+              zIndex: 0
             }}
           >
             {renderModel()}

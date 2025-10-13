@@ -7,7 +7,11 @@ import {
   Map, 
   Bell, 
   Activity,
-  Box
+  Box,
+  Circle,
+  Lightbulb,
+  Hand,
+  Terminal
 } from 'lucide-react'
 
 /**
@@ -30,36 +34,44 @@ export const ProfessionalWidgetPalette = ({
       name: 'All Widgets',
       widgets: [
         { type: 'gauge', name: 'Gauge', icon: Gauge, description: 'Display values with visual indicators' },
+        { type: 'gauge360', name: '360° Gauge', icon: Circle, description: 'Full circle gauge display' },
         { type: 'chart', name: 'Chart', icon: BarChart3, description: 'Data visualization and analytics' },
         { type: 'toggle', name: 'Toggle', icon: ToggleLeft, description: 'On/off control switches' },
         { type: 'slider', name: 'Slider', icon: Sliders, description: 'Range and value controls' },
         { type: 'map', name: 'Map', icon: Map, description: 'Geographic data visualization' },
         { type: 'notification', name: 'Notification', icon: Bell, description: 'Alerts and messages' },
         { type: 'sensor-tile', name: 'Sensor Tile', icon: Activity, description: 'Sensor data display' },
-        { type: '3d-model', name: '3D Model', icon: Box, description: '3D object visualization' }
+        { type: '3d-model', name: '3D Model', icon: Box, description: '3D object visualization' },
+        { type: 'led', name: 'LED Indicator', icon: Lightbulb, description: 'Visual LED status indicator' },
+        { type: 'tact-button', name: 'Button', icon: Hand, description: 'Tactile button control' },
+        { type: 'terminal', name: 'Terminal', icon: Terminal, description: 'Command line log display' }
       ]
     },
     controls: {
       name: 'Controls',
       widgets: [
         { type: 'toggle', name: 'Toggle', icon: ToggleLeft, description: 'On/off control switches' },
-        { type: 'slider', name: 'Slider', icon: Sliders, description: 'Range and value controls' }
+        { type: 'slider', name: 'Slider', icon: Sliders, description: 'Range and value controls' },
+        { type: 'tact-button', name: 'Button', icon: Hand, description: 'Tactile button control' }
       ]
     },
     visualization: {
       name: 'Visualization',
       widgets: [
         { type: 'gauge', name: 'Gauge', icon: Gauge, description: 'Display values with visual indicators' },
+        { type: 'gauge360', name: '360° Gauge', icon: Circle, description: 'Full circle gauge display' },
         { type: 'chart', name: 'Chart', icon: BarChart3, description: 'Data visualization and analytics' },
         { type: 'map', name: 'Map', icon: Map, description: 'Geographic data visualization' },
-        { type: '3d-model', name: '3D Model', icon: Box, description: '3D object visualization' }
+        { type: '3d-model', name: '3D Model', icon: Box, description: '3D object visualization' },
+        { type: 'led', name: 'LED Indicator', icon: Lightbulb, description: 'Visual LED status indicator' }
       ]
     },
     data: {
       name: 'Data',
       widgets: [
         { type: 'sensor-tile', name: 'Sensor Tile', icon: Activity, description: 'Sensor data display' },
-        { type: 'notification', name: 'Notification', icon: Bell, description: 'Alerts and messages' }
+        { type: 'notification', name: 'Notification', icon: Bell, description: 'Alerts and messages' },
+        { type: 'terminal', name: 'Terminal', icon: Terminal, description: 'Command line log display' }
       ]
     }
   }

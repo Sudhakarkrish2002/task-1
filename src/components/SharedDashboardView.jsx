@@ -11,6 +11,10 @@ import { ToggleWidget } from './widgets/toggle-widget'
 import { SimpleSensorWidget } from './widgets/simple-sensor-widget'
 import { SliderWidget } from './widgets/slider-widget'
 import { Model3DWidget } from './widgets/model3d-widget'
+import { Gauge360Widget } from './widgets/gauge360-widget'
+import { LEDWidget } from './widgets/led-widget'
+import { TactButtonWidget } from './widgets/tact-button-widget'
+import { TerminalWidget } from './widgets/terminal-widget'
 import sharingService from '../services/sharingService'
 import dashboardService from '../services/dashboardService'
 import mqttService from '../services/mqttService'
@@ -297,7 +301,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
     
     const commonProps = {
       widgetId: widget.id,
-      title: widget.title || widget.type,
+      title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : widget.type),
       connected: mqttConnected,
       deviceInfo: null
     }
@@ -388,6 +392,54 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
           color={widget.color || '#3b82f6'}
           size="small"
           mqttTopic={widgetMqttTopic}
+        />
+      
+      case 'gauge360':
+        return <Gauge360Widget 
+          key={widget.id} 
+          {...commonProps} 
+          min={widget.config?.minValue || widget.minValue || widget.min || 0}
+          max={widget.config?.maxValue || widget.maxValue || widget.max || 360}
+          unit={widget.config?.unit || widget.unit || '°'}
+          color={widget.config?.color || widget.color || '#3b82f6'}
+          value={180} // Default value, will be overridden by MQTT data
+          topic={widgetMqttTopic}
+          valuePath={widgetValuePath}
+        />
+      
+      case 'led':
+        return <LEDWidget 
+          key={widget.id} 
+          {...commonProps} 
+          isOn={false}
+          color={widget.config?.color || widget.color || '#22c55e'}
+          stateTopic={widgetMqttTopic}
+          valuePath={widgetValuePath}
+        />
+      
+      case 'tact-button':
+        return <TactButtonWidget 
+          key={widget.id} 
+          {...commonProps} 
+          isPressed={false}
+          buttonLabel={widget.config?.buttonLabel || widget.buttonLabel || 'PRESS'}
+          buttonColor={widget.config?.color || widget.color || '#3b82f6'}
+          setIsPressed={() => {}}
+          stateTopic={widgetMqttTopic}
+          commandTopic={widget.config?.commandTopic || widget.commandTopic}
+          valuePath={widgetValuePath}
+        />
+      
+      case 'terminal':
+        return <TerminalWidget 
+          key={widget.id} 
+          {...commonProps} 
+          logs={[]}
+          maxLines={widget.config?.maxLines || widget.maxLines || 50}
+          topic={widgetMqttTopic}
+          valuePath={widgetValuePath}
+          textColor={widget.config?.textColor || widget.textColor || '#00ff00'}
+          backgroundColor={widget.config?.backgroundColor || widget.backgroundColor || '#0a0a0a'}
         />
       
       default:
@@ -527,7 +579,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
         i: widget.i || widget.id || `widget-${index}`, // Ensure unique ID
         id: widget.id || widget.i || `widget-${index}`,
         type: widget.type,
-        title: widget.title || widget.type,
+        title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : widget.type),
         // Keep original properties for widget rendering
         config: widget.config || {},
         data: widget.data || {},

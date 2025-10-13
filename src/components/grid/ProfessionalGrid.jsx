@@ -23,6 +23,8 @@ export const ProfessionalGrid = ({
   const [draggedWidget, setDraggedWidget] = useState(null)
   const [dragOverPosition, setDragOverPosition] = useState(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [draggingExistingWidget, setDraggingExistingWidget] = useState(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   
   const gridRef = useRef(null)
   const dragCounterRef = useRef(0)
@@ -83,9 +85,18 @@ export const ProfessionalGrid = ({
   // Handle drag over
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = 'copy'
     
-    if (draggedWidget) {
+    if (draggingExistingWidget) {
+      e.dataTransfer.dropEffect = 'move'
+      const rect = gridRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left - dragOffset.x
+      const y = e.clientY - rect.top - dragOffset.y
+      const position = getGridPosition(x, y)
+      
+      setDragOverPosition(position)
+      setIsDragOver(true)
+    } else if (draggedWidget) {
+      e.dataTransfer.dropEffect = 'copy'
       const rect = gridRef.current.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
@@ -94,7 +105,7 @@ export const ProfessionalGrid = ({
       setDragOverPosition(position)
       setIsDragOver(true)
     }
-  }, [draggedWidget, getGridPosition])
+  }, [draggedWidget, draggingExistingWidget, dragOffset, getGridPosition])
 
   // Handle drag leave
   const handleDragLeave = useCallback((e) => {
@@ -115,6 +126,34 @@ export const ProfessionalGrid = ({
   const handleDrop = useCallback((e) => {
     e.preventDefault()
     
+    // Check if we're dropping an existing widget (moving it)
+    if (draggingExistingWidget && onWidgetUpdate) {
+      const rect = gridRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left - dragOffset.x
+      const y = e.clientY - rect.top - dragOffset.y
+      const position = getGridPosition(x, y)
+
+      const widget = widgets.find(w => w.id === draggingExistingWidget)
+      if (widget) {
+        // Ensure position is within bounds
+        const finalX = Math.max(0, Math.min(position.x, GRID_CONFIG.cols - widget.w))
+        const finalY = Math.max(0, position.y)
+
+        // Check if position is available (excluding current widget)
+        if (isPositionAvailable(finalX, finalY, widget.w, widget.h, widget.id)) {
+          onWidgetUpdate(widget.id, { x: finalX, y: finalY })
+        }
+      }
+
+      // Clean up
+      setDraggingExistingWidget(null)
+      setDragOffset({ x: 0, y: 0 })
+      setIsDragOver(false)
+      setDragOverPosition(null)
+      return
+    }
+    
+    // Otherwise, we're dropping a new widget from the palette
     const widgetType = e.dataTransfer.getData('text/plain') || draggedWidget
     if (!widgetType || !onWidgetAdd) return
 
@@ -142,7 +181,7 @@ export const ProfessionalGrid = ({
     setDragOverPosition(null)
     setIsDragOver(false)
     dragCounterRef.current = 0
-  }, [draggedWidget, onWidgetAdd, getGridPosition, isPositionAvailable, findAvailablePosition])
+  }, [draggedWidget, draggingExistingWidget, dragOffset, widgets, onWidgetAdd, onWidgetUpdate, getGridPosition, isPositionAvailable, findAvailablePosition])
 
   // Handle widget click
   const handleWidgetClick = useCallback((widget, e) => {
@@ -176,6 +215,35 @@ export const ProfessionalGrid = ({
       onWidgetSettings(widget)
     }
   }, [onWidgetSettings])
+
+  // Handle widget drag start (for moving existing widgets)
+  const handleWidgetDragStart = useCallback((widget, e) => {
+    if (isPreviewMode || isMobile) return // Don't allow dragging in preview mode or mobile
+    
+    setDraggingExistingWidget(widget.id)
+    
+    // Calculate offset from widget's top-left corner to mouse position
+    const widgetRect = e.currentTarget.getBoundingClientRect()
+    const gridRect = gridRef.current.getBoundingClientRect()
+    
+    const offsetX = e.clientX - widgetRect.left
+    const offsetY = e.clientY - widgetRect.top
+    
+    setDragOffset({ x: offsetX, y: offsetY })
+    setIsDragOver(true)
+    
+    // Make the dragged element semi-transparent
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', widget.id)
+  }, [isPreviewMode, isMobile])
+
+  // Handle widget drag end
+  const handleWidgetDragEnd = useCallback(() => {
+    setDraggingExistingWidget(null)
+    setDragOffset({ x: 0, y: 0 })
+    setIsDragOver(false)
+    setDragOverPosition(null)
+  }, [])
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
@@ -238,14 +306,18 @@ export const ProfessionalGrid = ({
         )}
 
         {/* Drop Indicator */}
-        {isDragOver && dragOverPosition && draggedWidget && (
+        {isDragOver && dragOverPosition && (draggedWidget || draggingExistingWidget) && (
           <div 
             className="drop-indicator"
             style={{
               left: `${dragOverPosition.x * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
               top: `${dragOverPosition.y * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
-              width: `${getWidgetSize(draggedWidget).w * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`,
-              height: `${getWidgetSize(draggedWidget).h * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`
+              width: draggingExistingWidget 
+                ? `${widgets.find(w => w.id === draggingExistingWidget)?.w * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`
+                : `${getWidgetSize(draggedWidget).w * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`,
+              height: draggingExistingWidget
+                ? `${widgets.find(w => w.id === draggingExistingWidget)?.h * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`
+                : `${getWidgetSize(draggedWidget).h * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`
             }}
           />
         )}
@@ -254,7 +326,10 @@ export const ProfessionalGrid = ({
         {widgets.map(widget => (
           <div
             key={widget.id}
-            className={`grid-widget ${selectedWidget === widget.id ? 'selected' : ''} ${isMobile ? 'mobile-widget' : ''}`}
+            className={`grid-widget ${selectedWidget === widget.id ? 'selected' : ''} ${isMobile ? 'mobile-widget' : ''} ${draggingExistingWidget === widget.id ? 'dragging' : ''}`}
+            draggable={!isPreviewMode && !isMobile}
+            onDragStart={(e) => handleWidgetDragStart(widget, e)}
+            onDragEnd={handleWidgetDragEnd}
             style={isMobile ? {
               // Mobile card layout - no absolute positioning
               position: 'relative',
@@ -269,7 +344,9 @@ export const ProfessionalGrid = ({
               left: `${widget.x * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
               top: `${widget.y * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin)}px`,
               width: `${widget.w * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`,
-              height: `${widget.h * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`
+              height: `${widget.h * (GRID_CONFIG.rowHeight + GRID_CONFIG.margin) - GRID_CONFIG.margin}px`,
+              opacity: draggingExistingWidget === widget.id ? 0.5 : 1,
+              cursor: !isPreviewMode ? 'move' : 'default'
             }}
             onClick={(e) => handleWidgetClick(widget, e)}
           >

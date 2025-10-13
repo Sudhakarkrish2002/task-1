@@ -133,8 +133,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   cursor: pointer;
-  overflow: visible;
-  /* Ensure 3D content can extend beyond widget boundaries */
+  overflow: hidden;
+  /* Ensure content stays within widget boundaries */
   z-index: 1;
   /* Prevent overlaps by ensuring proper positioning */
   box-sizing: border-box;
@@ -145,7 +145,7 @@
 /* Special handling for 3D model widgets */
 .grid-widget[data-widget-type="model3d"] {
   overflow: visible;
-  z-index: 10;
+  z-index: 1; /* Lower z-index so controls can appear above */
   /* Allow 3D content to extend beyond widget container */
   contain: none;
 }
@@ -160,15 +160,26 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
+.grid-widget.dragging {
+  opacity: 0.5;
+  cursor: grabbing !important;
+  z-index: 1000;
+}
+
+.grid-widget:not(.dragging):not([draggable="false"]) {
+  cursor: grab;
+}
+
 /* Widget Content */
 .widget-content {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: visible;
-  /* Ensure content can extend beyond widget boundaries */
+  overflow: hidden;
+  /* Ensure content stays within widget boundaries */
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Special handling for 3D model widget content */
@@ -200,6 +211,7 @@
   gap: 4px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 100; /* Ensure controls appear above all widget content */
 }
 
 .grid-widget.selected .widget-controls {
@@ -407,13 +419,40 @@
   background: #94a3b8;
 }
 
+/* Widget Text and Content Constraints */
+.grid-widget * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.grid-widget h1, .grid-widget h2, .grid-widget h3, 
+.grid-widget h4, .grid-widget h5, .grid-widget h6 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.grid-widget p, .grid-widget span, .grid-widget div {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Ensure canvas elements are properly constrained */
+.grid-widget canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: auto !important;
+}
+
 /* Dashboard View Specific Styles */
 .dashboard-view .layout {
   position: relative;
   width: 100%;
   min-height: 600px;
   height: auto;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .dashboard-view .react-grid-item {

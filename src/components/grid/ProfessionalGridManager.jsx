@@ -10,6 +10,10 @@ import { MapWidget } from '../widgets/map-widget'
 import { NotificationWidget } from '../widgets/notification-widget'
 import { SimpleSensorWidget } from '../widgets/simple-sensor-widget'
 import { Model3DWidget } from '../widgets/model3d-widget'
+import { Gauge360Widget } from '../widgets/gauge360-widget'
+import { LEDWidget } from '../widgets/led-widget'
+import { TactButtonWidget } from '../widgets/tact-button-widget'
+import { TerminalWidget } from '../widgets/terminal-widget'
 
 // Mobile and tablet detection hook
 const useDeviceType = () => {
@@ -71,7 +75,7 @@ export const ProfessionalGridManager = ({
         widgetId: widget.id,
         title: widget.title,
         panelId: 'default',
-        connected: false,
+        connected: true, // Set to true for all widgets in grid manager
         deviceInfo: null
       }
 
@@ -142,6 +146,9 @@ export const ProfessionalGridManager = ({
             <SimpleSensorWidget
               {...commonProps}
               value={25}
+              unit={widget.unit || widget.data?.unit || '°C'}
+              min={widget.minValue || 0}
+              max={widget.maxValue || 100}
               // MQTT configuration
               topic={widget.mqttTopic}
               valuePath={widget.valuePath}
@@ -151,6 +158,58 @@ export const ProfessionalGridManager = ({
           return (
             <Model3DWidget
               {...commonProps}
+            />
+          )
+        case 'gauge360':
+          return (
+            <Gauge360Widget
+              {...commonProps}
+              min={widget.minValue || 0}
+              max={widget.maxValue || 360}
+              unit={widget.unit || widget.data?.unit || '°'}
+              color={widget.color || '#3b82f6'}
+              value={180}
+              // MQTT configuration
+              topic={widget.mqttTopic}
+              valuePath={widget.valuePath}
+            />
+          )
+        case 'led':
+          return (
+            <LEDWidget
+              {...commonProps}
+              isOn={false}
+              color={widget.color || '#22c55e'}
+              // MQTT configuration
+              stateTopic={widget.mqttTopic}
+              valuePath={widget.valuePath}
+            />
+          )
+        case 'tact-button':
+          return (
+            <TactButtonWidget
+              {...commonProps}
+              isPressed={false}
+              buttonLabel={widget.buttonLabel || 'PRESS'}
+              buttonColor={widget.color || '#3b82f6'}
+              setIsPressed={() => {}}
+              // MQTT configuration
+              stateTopic={widget.mqttTopic}
+              commandTopic={widget.commandTopic}
+              valuePath={widget.valuePath}
+            />
+          )
+        case 'terminal':
+          return (
+            <TerminalWidget
+              {...commonProps}
+              logs={[]}
+              maxLines={widget.maxLines || 50}
+              // MQTT configuration
+              topic={widget.mqttTopic}
+              valuePath={widget.valuePath}
+              textColor={widget.textColor || '#00ff00'}
+              backgroundColor={widget.backgroundColor || '#0a0a0a'}
             />
           )
         default:
@@ -190,7 +249,7 @@ export const ProfessionalGridManager = ({
             y: widget.y,
             w: widget.w,
             h: widget.h,
-            title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+            title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`),
             // Put additional properties in config object (backend allows config)
             config: {
               dataType: widget.dataType || 'int',
@@ -321,12 +380,13 @@ export const ProfessionalGridManager = ({
       y: finalPosition.y,
       w: size.w,
       h: size.h,
-      title: `${widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}`,
+      title: widgetType === 'sensor-tile' ? 'Sensor' : `${widgetType.charAt(0).toUpperCase() + widgetType.slice(1)}`,
       dataType: 'int',
       entryType: 'automatic',
       minValue: 0,
       maxValue: 100,
       dataChannelId: 0,
+      unit: widgetType === 'sensor-tile' ? '°C' : undefined, // Default unit for sensor widgets
       data: getDefaultWidgetData(widgetType),
       render: getWidgetRenderer(widgetType)
     }
@@ -396,13 +456,15 @@ export const ProfessionalGridManager = ({
   const handleWidgetSettings = useCallback((widget) => {
     setWidgetSettings({
       id: widget.id,
-      title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+      type: widget.type, // Include type to conditionally show unit dropdown
+      title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`),
       dataType: widget.dataType || 'int',
       entryType: widget.entryType || 'automatic',
       minValue: widget.minValue || 0,
       maxValue: widget.maxValue || 100,
       dataChannelId: widget.dataChannelId || 0,
       customDataChannelId: widget.customDataChannelId || '',
+      unit: widget.unit || (widget.type === 'sensor-tile' ? '°C' : ''), // Default unit for sensor widgets
       // MQTT configuration
       mqttTopic: widget.mqttTopic || '',
       valuePath: widget.valuePath || '',
@@ -593,6 +655,23 @@ export const ProfessionalGridManager = ({
                     placeholder="Enter widget title"
                   />
                 </div>
+
+                {/* Unit Type (Only for sensor-tile widgets) */}
+                {widgetSettings.type === 'sensor-tile' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Unit Type</label>
+                    <select
+                      value={widgetSettings.unit || '°C'}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, unit: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="°C">Temperature → °C</option>
+                      <option value="%">Humidity → %</option>
+                      <option value="V">Voltage → V</option>
+                      <option value="kPa">Pressure → kPa</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* 2. Data Type */}
                 <div>

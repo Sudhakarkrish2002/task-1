@@ -13,6 +13,10 @@ import { ToggleWidget } from '../components/widgets/toggle-widget'
 import { SimpleSensorWidget } from '../components/widgets/simple-sensor-widget'
 import { SliderWidget } from '../components/widgets/slider-widget'
 import { Model3DWidget } from '../components/widgets/model3d-widget'
+import { Gauge360Widget } from '../components/widgets/gauge360-widget'
+import { LEDWidget } from '../components/widgets/led-widget'
+import { TactButtonWidget } from '../components/widgets/tact-button-widget'
+import { TerminalWidget } from '../components/widgets/terminal-widget'
 import ProfessionalGridManager from '../components/grid/ProfessionalGridManager'
  
 function CreatePanel() {
@@ -57,13 +61,17 @@ function CreatePanel() {
   // Widget types available in the palette
   const widgetTypes = [
     { type: 'gauge', name: 'Gauge', icon: GaugeWidget, color: 'bg-red-500', bgClass: 'bg-red-100', textClass: 'text-red-600', component: GaugeWidget },
+    { type: 'gauge360', name: '360° Gauge', icon: Gauge360Widget, color: 'bg-blue-500', bgClass: 'bg-blue-100', textClass: 'text-blue-600', component: Gauge360Widget },
     { type: 'chart', name: 'Chart', icon: ChartWidget, color: 'bg-red-500', bgClass: 'bg-red-100', textClass: 'text-red-600', component: ChartWidget },
     { type: 'toggle', name: 'Toggle', icon: ToggleWidget, color: 'bg-purple-500', bgClass: 'bg-purple-100', textClass: 'text-purple-600', component: ToggleWidget },
     { type: 'slider', name: 'Slider', icon: SliderWidget, color: 'bg-orange-500', bgClass: 'bg-orange-100', textClass: 'text-orange-600', component: SliderWidget },
     { type: 'map', name: 'Map', icon: MapWidget, color: 'bg-red-500', bgClass: 'bg-red-100', textClass: 'text-red-600', component: MapWidget },
     { type: '3d-model', name: '3D Model', icon: Model3DWidget, color: 'bg-indigo-500', bgClass: 'bg-indigo-100', textClass: 'text-indigo-600', component: Model3DWidget },
     { type: 'notification', name: 'Notification', icon: NotificationWidget, color: 'bg-yellow-500', bgClass: 'bg-yellow-100', textClass: 'text-yellow-600', component: NotificationWidget },
-    { type: 'sensor-tile', name: 'Sensor Tile', icon: SimpleSensorWidget, color: 'bg-teal-500', bgClass: 'bg-teal-100', textClass: 'text-teal-600', component: SimpleSensorWidget }
+    { type: 'sensor-tile', name: 'Sensor Tile', icon: SimpleSensorWidget, color: 'bg-teal-500', bgClass: 'bg-teal-100', textClass: 'text-teal-600', component: SimpleSensorWidget },
+    { type: 'led', name: 'LED Indicator', icon: LEDWidget, color: 'bg-green-500', bgClass: 'bg-green-100', textClass: 'text-green-600', component: LEDWidget },
+    { type: 'tact-button', name: 'Button', icon: TactButtonWidget, color: 'bg-indigo-500', bgClass: 'bg-indigo-100', textClass: 'text-indigo-600', component: TactButtonWidget },
+    { type: 'terminal', name: 'Terminal', icon: TerminalWidget, color: 'bg-gray-500', bgClass: 'bg-gray-100', textClass: 'text-gray-600', component: TerminalWidget }
   ]
 
   useEffect(() => {
@@ -112,6 +120,7 @@ function CreatePanel() {
       entryType: widget.entryType || 'automatic',
       minValue: widget.minValue || 0,
       maxValue: widget.maxValue || 100,
+      unit: widget.unit || (widget.type === 'sensor-tile' ? '°C' : ''),
       dataChannelId: widget.dataChannelId || 0,
       // MQTT topic used by widgets that support live data (e.g., Gauge)
       mqttTopic: (widget.mqttTopic || '').trim(),
@@ -266,8 +275,68 @@ function CreatePanel() {
             color={widget.color || '#3b82f6'}
             size="small"
             mqttTopic={widget.mqttTopic}
-            connected={false}
+            connected={mqttConnected}
             deviceInfo={null}
+          />
+        )
+      case 'gauge360':
+        return (
+          <Gauge360Widget
+            widgetId={widget.i}
+            title={widget.title || '360° Gauge'}
+            min={widget.minValue || widget.min || 0}
+            max={widget.maxValue || widget.max || 360}
+            unit={widget.unit || '°'}
+            color={widget.color || '#3b82f6'}
+            value={180}
+            connected={mqttConnected}
+            deviceInfo={null}
+            topic={widget.mqttTopic}
+            valuePath={widget.valuePath}
+          />
+        )
+      case 'led':
+        return (
+          <LEDWidget
+            widgetId={widget.i}
+            title={widget.title || 'LED Indicator'}
+            isOn={false}
+            connected={mqttConnected}
+            deviceInfo={null}
+            color={widget.color || '#22c55e'}
+            stateTopic={widget.mqttTopic}
+            valuePath={widget.valuePath}
+          />
+        )
+      case 'tact-button':
+        return (
+          <TactButtonWidget
+            widgetId={widget.i}
+            title={widget.title || 'Button'}
+            isPressed={false}
+            connected={mqttConnected}
+            deviceInfo={null}
+            buttonLabel={widget.buttonLabel || 'PRESS'}
+            buttonColor={widget.color || '#3b82f6'}
+            setIsPressed={() => {}}
+            stateTopic={widget.mqttTopic}
+            commandTopic={widget.commandTopic}
+            valuePath={widget.valuePath}
+          />
+        )
+      case 'terminal':
+        return (
+          <TerminalWidget
+            widgetId={widget.i}
+            title={widget.title || 'Terminal'}
+            logs={[]}
+            connected={mqttConnected}
+            deviceInfo={null}
+            maxLines={widget.maxLines || 50}
+            topic={widget.mqttTopic}
+            valuePath={widget.valuePath}
+            textColor={widget.textColor || '#00ff00'}
+            backgroundColor={widget.backgroundColor || '#0a0a0a'}
           />
         )
       default:
@@ -310,7 +379,7 @@ function CreatePanel() {
           y: widget.y,
           w: widget.w,
           h: widget.h,
-          title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+          title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`),
           // Put additional properties in config object (backend allows config)
           config: {
             dataType: widget.dataType || 'int',
@@ -459,7 +528,7 @@ function CreatePanel() {
             y: widget.y,
             w: widget.w,
             h: widget.h,
-            title: widget.title || `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`,
+            title: widget.title || (widget.type === 'sensor-tile' ? 'Sensor' : `${widget.type.charAt(0).toUpperCase() + widget.type.slice(1)}`),
             dataType: widget.dataType || 'int',
             entryType: widget.entryType || 'automatic',
             minValue: widget.minValue || 0,
@@ -930,6 +999,38 @@ function CreatePanel() {
                     />
                   </div>
                 </div>
+
+                {/* 6. Unit (for sensor widgets) */}
+                {selectedWidget?.type === 'sensor-tile' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Unit Type</label>
+                    <select
+                      value={widgetSettings.unit || '°C'}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, unit: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    >
+                      <option value="°C">Temperature → °C</option>
+                      <option value="%">Humidity → %</option>
+                      <option value="V">Voltage → V</option>
+                      <option value="kPa">Pressure → kPa</option>
+                    </select>
+                  </div>
+                )}
+                {(selectedWidget?.type === 'gauge' || selectedWidget?.type === 'slider') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                    <input
+                      type="text"
+                      value={widgetSettings.unit || ''}
+                      onChange={(e) => setWidgetSettings({ ...widgetSettings, unit: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="e.g. °C, °F, %, m/s, ppm"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Common units: °C (Celsius), °F (Fahrenheit), % (Percent), m/s (meters/second), ppm (parts per million)
+                    </p>
+                  </div>
+                )}
 
                 {/* MQTT Configuration Section */}
                 <div className="border-t border-gray-200 pt-4">

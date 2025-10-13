@@ -535,7 +535,7 @@ export const EnhancedGridLayout = ({
                 
                 {/* Widget Control Buttons - Show on hover or when selected, but not in dashboard view */}
                 {!isPreviewMode && !isDashboardView && (
-                  <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
+                  <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex space-x-1" style={{ zIndex: 100 }}>
                     {onWidgetSettings && (
                       <button
                         onClick={(e) => onWidgetSettings(widget, e)}
