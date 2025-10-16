@@ -79,20 +79,22 @@ export const LEDWidget = ({
       </div>
       
       {/* LED Display */}
-      <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-b from-white to-gray-50 min-h-0`}>
-        <div className={`flex flex-col items-center ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
-          {/* LED Circle */}
-          <div className="relative">
+      <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'p-6' : 'p-8'} bg-gradient-to-b from-white to-gray-50 min-h-0`}>
+        <div className={`flex flex-col items-center ${isMobile ? 'space-y-4' : 'space-y-6'} w-full h-full max-w-full max-h-full`}>
+          {/* LED Circle Container - Responsive sizing */}
+          <div className="relative flex items-center justify-center w-full h-full max-w-full max-h-full">
             {/* Outer glow ring */}
             <div 
-              className={`absolute inset-0 rounded-full transition-all duration-500 ${
+              className={`absolute rounded-full transition-all duration-500 ${
                 effectiveIsOn ? 'animate-pulse' : ''
               }`}
               style={{
-                width: isMobile ? '80px' : '100px',
-                height: isMobile ? '80px' : '100px',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: 'min(12vw, 12vh, 100px)',
+                height: 'min(12vw, 12vh, 100px)',
+                maxWidth: '100px',
+                maxHeight: '100px',
+                minWidth: '60px',
+                minHeight: '60px',
                 backgroundColor: effectiveIsOn ? color : offColor,
                 opacity: effectiveIsOn ? 0.3 : 0.1,
                 filter: effectiveIsOn ? 'blur(15px)' : 'blur(8px)',
@@ -102,12 +104,14 @@ export const LEDWidget = ({
             
             {/* Main LED body */}
             <div 
-              className="relative rounded-full shadow-2xl transition-all duration-500 border-4 max-w-full max-h-full"
+              className="relative rounded-full shadow-2xl transition-all duration-500 border-4"
               style={{
-                width: isMobile ? '80px' : '100px',
-                height: isMobile ? '80px' : '100px',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: 'min(12vw, 12vh, 100px)',
+                height: 'min(12vw, 12vh, 100px)',
+                maxWidth: '100px',
+                maxHeight: '100px',
+                minWidth: '60px',
+                minHeight: '60px',
                 backgroundColor: effectiveIsOn ? color : offColor,
                 borderColor: effectiveIsOn ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
                 boxShadow: effectiveIsOn 
@@ -117,7 +121,7 @@ export const LEDWidget = ({
             >
               {/* Highlight effect */}
               <div 
-                className="absolute top-4 left-4 w-8 h-8 bg-white rounded-full transition-opacity duration-500"
+                className="absolute top-2 left-2 w-6 h-6 bg-white rounded-full transition-opacity duration-500"
                 style={{
                   opacity: effectiveIsOn ? 0.6 : 0.2,
                   filter: 'blur(8px)'

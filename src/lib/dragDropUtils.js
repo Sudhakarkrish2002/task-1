@@ -50,43 +50,56 @@ const debounce = (func, wait) => {
 
 /**
  * Calculate the optimal position for a new widget based on drop coordinates
- * @param {Object} dropData - Drop event data
+ * Enhanced to work perfectly across entire dashboard width, especially right side
+ * @param {Object} dropData - Drop event data with x, y, containerWidth
  * @param {Array} existingWidgets - Current widgets
  * @param {Object} widgetSize - Size of the widget to place
  * @param {Object} gridConfig - Grid configuration
  * @returns {Object} - Optimal position {x, y}
  */
 export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, gridConfig = {}) => {
-  const { cols = 12, rowHeight = 80, margin = [16, 16] } = gridConfig
+  const { cols = 12, rowHeight = 60, margin = [12, 12], containerWidth } = gridConfig
   
   // If no widgets exist, place at top-left
   if (!existingWidgets || existingWidgets.length === 0) {
     return { x: 0, y: 0 }
   }
   
-  // Convert drop coordinates to grid coordinates
-  // rowHeight = 80, margin = [16, 16], so total cell size = 96
-  const cellSize = rowHeight + margin[0] // 80 + 16 = 96
-  const gridX = Math.floor(dropData.x / cellSize)
-  const gridY = Math.floor(dropData.y / cellSize)
+  // Calculate cell size dynamically based on container width
+  // This ensures accurate positioning across the entire width, including right side
+  const effectiveWidth = containerWidth || (typeof window !== 'undefined' ? window.innerWidth - 280 : 1140) // Subtract sidebar width
+  const cellWidth = (effectiveWidth - (margin[0] * (cols + 1))) / cols
+  const cellHeight = rowHeight
   
-  // Clamp to grid bounds
+  // Convert drop coordinates to grid coordinates with improved precision
+  const gridX = Math.floor(dropData.x / (cellWidth + margin[0]))
+  const gridY = Math.floor(dropData.y / (cellHeight + margin[1]))
+  
+  // Clamp to grid bounds - ensure we can drop all the way to the right edge
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
   const clampedY = Math.max(0, gridY)
   
-  console.log('Calculating position for widget:', widgetSize, 'at drop coords:', dropData, 'grid coords:', { x: clampedX, y: clampedY })
-  console.log('Existing widgets:', existingWidgets)
+  console.log('📍 Enhanced Drop Calculation:', {
+    dropCoords: dropData,
+    containerWidth: effectiveWidth,
+    cellWidth,
+    cellHeight,
+    gridCoords: { gridX, gridY },
+    finalCoords: { x: clampedX, y: clampedY },
+    cols,
+    widgetSize
+  })
   
   // Check if position is available
   if (isPositionAvailable(clampedX, clampedY, widgetSize, existingWidgets)) {
-    console.log('Position is available, using:', { x: clampedX, y: clampedY })
+    console.log('✅ Position available:', { x: clampedX, y: clampedY })
     return { x: clampedX, y: clampedY }
   }
   
   // If position is occupied, find nearest available position
-  console.log('Position is occupied, finding nearest available position')
+  console.log('⚠️ Position occupied, finding nearest...')
   const nearestPosition = findNearestAvailablePosition(clampedX, clampedY, widgetSize, existingWidgets, cols)
-  console.log('Nearest available position:', nearestPosition)
+  console.log('✅ Nearest position:', nearestPosition)
   return nearestPosition
 }
 
@@ -291,6 +304,7 @@ const easeInOutCubic = (t) => {
 
 /**
  * Enhanced drop handler with professional positioning
+ * Improved to work perfectly across entire dashboard width including right side
  * @param {Object} event - Drop event
  * @param {Array} existingWidgets - Current widgets
  * @param {Function} onWidgetAdd - Widget add callback
@@ -298,48 +312,50 @@ const easeInOutCubic = (t) => {
  */
 export const handleProfessionalDrop = (event, existingWidgets, onWidgetAdd, gridConfig = {}) => {
   event.preventDefault()
+  event.stopPropagation()
   
   // Get widget type from drag data
   const widgetType = event.dataTransfer.getData('text/plain') || window.draggedWidgetType
   
   if (!widgetType || !onWidgetAdd) {
-    console.warn('No widget type or add callback available')
+    console.warn('⚠️ No widget type or add callback available')
     return
   }
   
-  // Get widget size
+  // Get widget size based on current breakpoint
   const widgetSize = getWidgetSize(widgetType)
   
-  // Calculate drop position
+  // Calculate drop position with enhanced precision for right side
   const rect = event.currentTarget.getBoundingClientRect()
   const dropData = {
     x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    y: event.clientY - rect.top,
+    containerWidth: rect.width // Pass container width for accurate calculations
   }
   
-  // Calculate optimal position
-  const position = calculateOptimalPosition(dropData, existingWidgets, widgetSize, gridConfig)
+  console.log('🎯 Drop event at:', {
+    clientX: event.clientX,
+    clientY: event.clientY,
+    rectLeft: rect.left,
+    rectTop: rect.top,
+    rectWidth: rect.width,
+    dropData
+  })
   
-  // Create widget with calculated position
-  const newWidget = {
-    i: generateWidgetId(),
-    type: widgetType,
-    x: position.x,
-    y: position.y,
-    w: widgetSize.w,
-    h: widgetSize.h,
-    minW: 1,
-    minH: 1,
-    maxW: 12,
-    maxH: 10,
-    static: false
-  }
+  // Calculate optimal position with container width for scalability
+  const position = calculateOptimalPosition(dropData, existingWidgets, widgetSize, {
+    ...gridConfig,
+    containerWidth: rect.width
+  })
+  
+  console.log('✅ Final widget position:', position)
   
   // Add widget with specific position
   onWidgetAdd(widgetType, { position: position })
   
-  // Clear global variable
+  // Clear global variables
   window.draggedWidgetType = null
+  window.dragState.isDragging = false
 }
 
 /**
@@ -490,6 +506,7 @@ export const handleProfessionalDragEnd = (event, options = {}) => {
 
 /**
  * Enhanced drag over handler with real-time collision detection
+ * Improved for full-width dragging including right side of dashboard
  * @param {Object} event - Drag over event
  * @param {Array} existingWidgets - Current widgets
  * @param {Object} options - Additional options
@@ -498,6 +515,8 @@ export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => 
   const { onDragOver, onCollisionDetected, gridConfig = {} } = options
   
   event.preventDefault()
+  event.stopPropagation()
+  
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'copy'
   }
@@ -508,21 +527,29 @@ export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => 
   
   const widgetSize = getWidgetSize(widgetType)
   
-  // Calculate drop position
+  // Calculate drop position with container width for accurate right-side detection
   const rect = event.currentTarget.getBoundingClientRect()
   const dropData = {
     x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    y: event.clientY - rect.top,
+    containerWidth: rect.width
   }
   
-  // Convert to grid coordinates
-  const { cols = 12, rowHeight = 80, margin = [16, 16] } = gridConfig
-  const gridX = Math.floor(dropData.x / (rowHeight + margin[0]))
-  const gridY = Math.floor(dropData.y / (rowHeight + margin[1]))
+  // Convert to grid coordinates with dynamic cell sizing
+  const { cols = 12, rowHeight = 60, margin = [12, 12] } = gridConfig
+  const effectiveWidth = rect.width
+  const cellWidth = (effectiveWidth - (margin[0] * (cols + 1))) / cols
+  const cellHeight = rowHeight
   
-  // Clamp to grid bounds
+  const gridX = Math.floor(dropData.x / (cellWidth + margin[0]))
+  const gridY = Math.floor(dropData.y / (cellHeight + margin[1]))
+  
+  // Clamp to grid bounds - ensure full-width coverage
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
   const clampedY = Math.max(0, gridY)
+  
+  // Store last drag position for smoother feedback
+  window.dragState.lastDragPosition = { x: clampedX, y: clampedY }
   
   // Check for collisions
   const collidingWidgets = existingWidgets.filter(widget => {
@@ -546,7 +573,7 @@ export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => 
   
   // Call original drag over handler
   if (onDragOver) {
-    onDragOver(event, { position: { x: clampedX, y: clampedY }, collidingWidgets })
+    onDragOver(event, { position: { x: clampedX, y: clampedY }, collidingWidgets, cellWidth })
   }
 }
 

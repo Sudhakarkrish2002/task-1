@@ -3,7 +3,7 @@
  * Provides overlap detection, positioning algorithms, and grid management
  */
 
-/**
+ /**
  * Check if two grid items overlap
  * @param {Object} item1 - First grid item with x, y, w, h properties
  * @param {Object} item2 - Second grid item with x, y, w, h properties

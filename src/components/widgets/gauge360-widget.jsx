@@ -75,7 +75,7 @@ export const Gauge360Widget = ({
 
     const centerX = rect.width / 2
     const centerY = rect.height / 2
-    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 15 : 12), 10)
+    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 8 : 6), 15) // Increased radius
 
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
@@ -157,8 +157,8 @@ export const Gauge360Widget = ({
               ref={canvasRef}
               className="drop-shadow-lg max-w-full max-h-full"
               style={{ 
-                width: isMobile ? '180px' : '160px', 
-                height: isMobile ? '180px' : '160px',
+                width: isMobile ? '220px' : '200px', 
+                height: isMobile ? '220px' : '200px',
                 maxWidth: '100%',
                 maxHeight: '100%'
               }}

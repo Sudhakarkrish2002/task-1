@@ -61,7 +61,7 @@ export const GaugeWidget = ({
   const safeUnit = typeof unit === 'string' ? unit : ''
   const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin))) * 100
 
-  // Draw gauge
+  // Draw gauge with sharper semi-circular arc
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -74,48 +74,36 @@ export const GaugeWidget = ({
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
 
     const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 8 : 6), 10) // Minimal padding for maximum arc size
+    const centerY = rect.height * 0.75 // Lower centerY to accommodate text below
+    const radius = Math.max(Math.min(centerX, centerY) * 0.8, 25) // Increased radius with better scaling
 
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
 
     // Calculate percentage for filling
-    const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
+    const fillPercentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
     
-    // Background arc (unfilled portion) - Much thicker
+    // Set line cap to square for sharper edges
+    ctx.lineCap = 'square'
+    
+    // Background arc (unfilled portion) - Semi-circular with sharper edges
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
-    ctx.lineWidth = isMobile ? 22 : 18 // Much thicker arc
+    ctx.lineWidth = isMobile ? 20 : 16
     ctx.strokeStyle = '#e5e7eb'
     ctx.stroke()
 
-    // Value arc (filled portion) - draw from left to right based on percentage
-    const startAngle = Math.PI // Start from left (180 degrees)
-    const endAngle = Math.PI + (percentage * Math.PI) // End based on percentage
-    
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, startAngle, endAngle)
-    ctx.lineWidth = isMobile ? 22 : 18 // Much thicker arc
-    ctx.strokeStyle = color
-    ctx.stroke()
-    
-    // Add a filled circle at the end of the arc to show completion
-    if (percentage > 0) {
-      const endX = centerX + radius * Math.cos(endAngle)
-      const endY = centerY + radius * Math.sin(endAngle)
+    // Value arc (filled portion) - Semi-circular with sharper edges
+    if (fillPercentage > 0) {
+      const startAngle = Math.PI // Start from left (180 degrees)
+      const endAngle = Math.PI + (fillPercentage * Math.PI) // End based on percentage
       
       ctx.beginPath()
-      ctx.arc(endX, endY, (isMobile ? 8 : 6), 0, 2 * Math.PI)
-      ctx.fillStyle = color
-      ctx.fill()
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+      ctx.lineWidth = isMobile ? 20 : 16
+      ctx.strokeStyle = color
+      ctx.stroke()
     }
-
-    // Title text only (value is shown in overlay)
-    ctx.fillStyle = '#6b7280'
-    ctx.font = `${isMobile ? '14px' : '12px'} Inter, sans-serif` // Larger font for mobile
-    ctx.textAlign = 'center'
-    ctx.fillText(title, centerX, centerY + (isMobile ? 20 : 15))
   }, [safeValue, min, max, unit, color, title, isMobile])
 
   return (
@@ -135,25 +123,25 @@ export const GaugeWidget = ({
       </div>
       
       {/* Gauge */}
-      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-2' : 'p-3'} bg-gradient-to-b from-white to-gray-50`}>
+      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-3' : 'p-4'} bg-gradient-to-b from-white to-gray-50`}>
         <div className="relative w-full h-full flex items-center justify-center">
           <canvas
             ref={canvasRef}
             className="drop-shadow-lg max-w-full max-h-full"
             style={{ 
-              width: isMobile ? '240px' : '220px', 
-              height: isMobile ? '160px' : '140px',
+              width: isMobile ? '280px' : '260px', 
+              height: isMobile ? '140px' : '120px',
               maxWidth: '100%',
               maxHeight: '100%'
             }}
           />
-          {/* Value overlay */}
+          {/* Value display at the center line of the arc */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center px-2">
+            <div className="text-center px-2" style={{ marginTop: isMobile ? '35px' : '30px' }}>
               <div className={`${isMobile ? 'text-4xl' : 'text-3xl'} font-bold text-gray-800 leading-none`}>
                 {safeValue}
               </div>
-              <div className={`${isMobile ? 'text-base' : 'text-sm'} font-semibold text-gray-500 uppercase tracking-wide mt-1`}>
+              <div className={`${isMobile ? 'text-lg' : 'text-base'} font-semibold text-gray-500 uppercase tracking-wide mt-1`}>
                 {safeUnit}
               </div>
             </div>

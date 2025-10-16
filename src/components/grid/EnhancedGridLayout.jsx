@@ -12,6 +12,9 @@ import {
   batchAnimateWidgets,
   handleEnhancedDragOver
 } from '../../lib/dragDropUtils'
+import './EnhancedGridDragDrop.css'
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -113,68 +116,23 @@ export const EnhancedGridLayout = ({
     gridUtilization: widgets.length > 0 ? (widgets.reduce((acc, w) => acc + (w.w * w.h), 0) / (12 * 200)) * 100 : 0
   }
 
-  // Professional drop handler with smart collision handling
+  // Enhanced drop handler with scalable positioning across entire dashboard width
   const handleDrop = useCallback((event) => {
-    console.log('Professional drop event triggered:', event)
+    console.log('🎯 Enhanced drop event triggered')
     
     // Get widget type and calculate position
     const widgetType = event.dataTransfer.getData('text/plain') || window.draggedWidgetType
-    if (!widgetType || !onWidgetAdd) return
-    
-    const widgetSize = getWidgetSize(widgetType)
-    const rect = event.currentTarget.getBoundingClientRect()
-    const dropData = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+    if (!widgetType || !onWidgetAdd) {
+      console.warn('⚠️ No widget type or onWidgetAdd callback')
+      return
     }
     
-    // Convert to grid coordinates
-    // rowHeight = 80, margin = [16, 16], so total cell size = 96
-    const cellSize = 96 // 80 + 16
-    const gridX = Math.floor(dropData.x / cellSize)
-    const gridY = Math.floor(dropData.y / cellSize)
-    const dropPosition = {
-      x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
-      y: Math.max(0, gridY)
-    }
-    
-    // Handle smart collision if there are colliding widgets
-    if (collidingWidgets.length > 0) {
-      setIsAnimating(true)
-      
-      // Prepare batch animations for better performance
-      const animations = collidingWidgets.map((widget, index) => {
-        const element = document.querySelector(`[data-grid="${widget.i}"]`)
-        if (element) {
-          // Calculate new position (push right or down)
-          const newPosition = {
-            x: Math.min(widget.x + widgetSize.w, 12 - widget.w),
-            y: widget.y
-          }
-          
-          // If pushing right would go out of bounds, push down instead
-          if (newPosition.x + widget.w > 12) {
-            newPosition.x = widget.x
-            newPosition.y = widget.y + widgetSize.h + 1
-          }
-          
-          return {
-            element,
-            fromPosition: { x: widget.x * 96, y: widget.y * 96 },
-            toPosition: { x: newPosition.x * 96, y: newPosition.y * 96 }
-          }
-        }
-        return null
-      }).filter(Boolean)
-      
-      // Execute batch animations
-      batchAnimateWidgets(animations, () => {
-        setIsAnimating(false)
-      })
-    }
-    
-    // Add the new widget
-    onWidgetAdd(widgetType, { position: dropPosition })
+    // Use enhanced professional drop handler with full grid config
+    handleProfessionalDrop(event, widgets, onWidgetAdd, {
+      cols: 12,
+      rowHeight: 60,
+      margin: [12, 12]
+    })
     
     // Clear visual feedback
     setIsDragOver(false)
@@ -192,24 +150,28 @@ export const EnhancedGridLayout = ({
         element.style.border = ''
       }
     })
-  }, [widgets, onWidgetAdd, collidingWidgets])
+    
+    console.log('✅ Drop completed successfully')
+  }, [widgets, onWidgetAdd])
 
-  // Optimized drag over handler with throttling and performance improvements
+  // Enhanced drag over handler with full-width support and improved performance
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy'
     }
     
     setIsDragOver(true)
     
-    // Throttle the expensive operations
+    // Throttle the expensive operations for smooth performance
     if (window.dragOverThrottle) {
       clearTimeout(window.dragOverThrottle)
     }
     
     window.dragOverThrottle = setTimeout(() => {
-      // Calculate drop position for visual feedback
+      // Calculate drop position for visual feedback with enhanced precision
       if (!e.currentTarget) return
       
       const rect = e.currentTarget.getBoundingClientRect()
@@ -222,12 +184,20 @@ export const EnhancedGridLayout = ({
       const widgetType = window.draggedWidgetType
       if (widgetType) {
         const widgetSize = getWidgetSize(widgetType)
-        const cellSize = 96 // 80 + 16 margin
-        const gridX = Math.floor(x / cellSize)
-        const gridY = Math.floor(y / cellSize)
+        
+        // Use dynamic cell sizing based on container width for accurate right-side positioning
+        const cols = 12
+        const margin = 12
+        const rowHeight = 60
+        const effectiveWidth = rect.width
+        const cellWidth = (effectiveWidth - (margin * (cols + 1))) / cols
+        const cellHeight = rowHeight
+        
+        const gridX = Math.floor(x / (cellWidth + margin))
+        const gridY = Math.floor(y / (cellHeight + margin))
         
         const dropPosition = {
-          x: Math.max(0, Math.min(gridX, 12 - widgetSize.w)),
+          x: Math.max(0, Math.min(gridX, cols - widgetSize.w)),
           y: Math.max(0, gridY),
           w: widgetSize.w,
           h: widgetSize.h

@@ -117,18 +117,20 @@ export const TactButtonWidget = ({
       </div>
       
       {/* Button Display */}
-      <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} bg-gradient-to-b from-white to-gray-50 min-h-0`}>
-        <div className={`flex flex-col items-center ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
-          {/* Tact Button */}
-          <div className="relative">
+      <div className={`flex-1 flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-6'} bg-gradient-to-b from-white to-gray-50 min-h-0`}>
+        <div className={`flex flex-col items-center ${isMobile ? 'space-y-3' : 'space-y-4'} w-full h-full max-w-full max-h-full`}>
+          {/* Tact Button Container - Responsive sizing */}
+          <div className="relative flex items-center justify-center w-full h-full max-w-full max-h-full">
             {/* Button base/shadow */}
             <div 
-              className="absolute inset-0 rounded-full transition-all duration-150 max-w-full max-h-full"
+              className="absolute rounded-full transition-all duration-150"
               style={{
-                width: isMobile ? '80px' : '100px',
-                height: isMobile ? '80px' : '100px',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: 'min(10vw, 10vh, 80px)',
+                height: 'min(10vw, 10vh, 80px)',
+                maxWidth: '80px',
+                maxHeight: '80px',
+                minWidth: '50px',
+                minHeight: '50px',
                 backgroundColor: '#1f2937',
                 transform: effectiveIsPressed ? 'translateY(3px)' : 'translateY(4px)',
                 filter: 'blur(4px)',
@@ -138,12 +140,14 @@ export const TactButtonWidget = ({
             
             {/* Button outer ring */}
             <div 
-              className="relative rounded-full transition-all duration-150 flex items-center justify-center max-w-full max-h-full"
+              className="relative rounded-full transition-all duration-150 flex items-center justify-center"
               style={{
-                width: isMobile ? '80px' : '100px',
-                height: isMobile ? '80px' : '100px',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: 'min(10vw, 10vh, 80px)',
+                height: 'min(10vw, 10vh, 80px)',
+                maxWidth: '80px',
+                maxHeight: '80px',
+                minWidth: '50px',
+                minHeight: '50px',
                 backgroundColor: '#374151',
                 transform: effectiveIsPressed ? 'translateY(2px)' : 'translateY(0px)',
                 boxShadow: effectiveIsPressed 
@@ -158,12 +162,14 @@ export const TactButtonWidget = ({
                 onMouseLeave={handleRelease}
                 onTouchStart={handlePress}
                 onTouchEnd={handleRelease}
-                className="rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 transition-all duration-150 max-w-full max-h-full"
+                className="rounded-full focus:outline-none focus:ring-4 focus:ring-offset-2 transition-all duration-150"
                 style={{
-                  width: isMobile ? '60px' : '80px',
-                  height: isMobile ? '60px' : '80px',
-                  maxWidth: '100%',
-                  maxHeight: '100%',
+                  width: 'min(8vw, 8vh, 60px)',
+                  height: 'min(8vw, 8vh, 60px)',
+                  maxWidth: '60px',
+                  maxHeight: '60px',
+                  minWidth: '40px',
+                  minHeight: '40px',
                   backgroundColor: buttonColor,
                   transform: effectiveIsPressed ? 'scale(0.95)' : 'scale(1)',
                   boxShadow: effectiveIsPressed 
@@ -174,7 +180,7 @@ export const TactButtonWidget = ({
               >
                 {/* Button highlight */}
                 <div 
-                  className="absolute top-2 left-1/2 transform -translate-x-1/2 w-8 h-4 bg-white rounded-full transition-opacity duration-150"
+                  className="absolute top-1 left-1/2 transform -translate-x-1/2 w-6 h-3 bg-white rounded-full transition-opacity duration-150"
                   style={{
                     opacity: effectiveIsPressed ? 0.1 : 0.3,
                     filter: 'blur(4px)'
@@ -182,8 +188,8 @@ export const TactButtonWidget = ({
                 ></div>
                 
                 {/* Button label */}
-                <div className="flex flex-col items-center justify-center h-full max-w-full max-h-full overflow-hidden">
-                  <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-white tracking-wider truncate`}>
+                <div className="flex flex-col items-center justify-center h-full w-full overflow-hidden">
+                  <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-white tracking-wider truncate px-1`}>
                     {buttonLabel}
                   </span>
                 </div>
@@ -192,17 +198,17 @@ export const TactButtonWidget = ({
           </div>
           
           {/* Status Display */}
-          <div className="text-center max-w-full overflow-hidden">
+          <div className="text-center w-full px-2">
             <div 
-              className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold ${isMobile ? 'mb-1' : 'mb-2'} transition-colors duration-150 truncate`}
+              className={`${isMobile ? 'text-base' : 'text-lg'} font-bold mb-2 transition-colors duration-150`}
               style={{
                 color: effectiveIsPressed ? buttonColor : '#6b7280'
               }}
             >
               {effectiveIsPressed ? 'PRESSED' : 'READY'}
             </div>
-            <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-500 truncate`}>
-              Press Count: {pressCount}
+            <div className={`${isMobile ? 'text-sm' : 'text-base'} font-semibold text-gray-700 mb-1`}>
+              Press Count: <span className="font-bold text-blue-600">{pressCount}</span>
             </div>
           </div>
           
