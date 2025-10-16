@@ -100,34 +100,55 @@
 .enhanced-grid-layout .grid-container {
   position: relative;
   width: 100%;
+  min-height: 600px;
 }
 
-/* Right edge indicator when dragging */
-.enhanced-grid-layout.drag-active .grid-container::after {
+/* Right edge indicator when dragging - makes it clear full width is droppable */
+.enhanced-grid-layout.drag-over .grid-container::after {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 4px;
+  width: 6px;
   background: linear-gradient(180deg, 
-    rgba(59, 130, 246, 0) 0%,
-    rgba(59, 130, 246, 0.4) 50%,
-    rgba(59, 130, 246, 0) 100%
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(59, 130, 246, 0.6) 50%,
+    rgba(59, 130, 246, 0.1) 100%
   );
-  animation: edge-pulse 2s ease-in-out infinite;
+  animation: edge-pulse 1.5s ease-in-out infinite;
   pointer-events: none;
   z-index: 1000;
+  box-shadow: -2px 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* Left edge indicator for symmetry */
+.enhanced-grid-layout.drag-over .grid-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(180deg, 
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(59, 130, 246, 0.6) 50%,
+    rgba(59, 130, 246, 0.1) 100%
+  );
+  animation: edge-pulse 1.5s ease-in-out infinite reverse;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(59, 130, 246, 0.3);
 }
 
 @keyframes edge-pulse {
   0%, 100% {
-    opacity: 0.3;
+    opacity: 0.4;
     transform: scaleX(1);
   }
   50% {
     opacity: 1;
-    transform: scaleX(1.5);
+    transform: scaleX(1.8);
   }
 }
 

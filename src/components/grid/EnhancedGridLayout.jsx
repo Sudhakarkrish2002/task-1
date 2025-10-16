@@ -127,11 +127,12 @@ export const EnhancedGridLayout = ({
       return
     }
     
-    // Use enhanced professional drop handler with full grid config
+    // Use enhanced professional drop handler with consistent grid config
     handleProfessionalDrop(event, widgets, onWidgetAdd, {
       cols: 12,
-      rowHeight: 60,
-      margin: [12, 12]
+      rowHeight: 80,
+      margin: [16, 16],
+      containerPadding: [16, 16]
     })
     
     // Clear visual feedback
@@ -185,16 +186,26 @@ export const EnhancedGridLayout = ({
       if (widgetType) {
         const widgetSize = getWidgetSize(widgetType)
         
-        // Use dynamic cell sizing based on container width for accurate right-side positioning
+        // Use consistent grid config matching GRID_CONFIG
         const cols = 12
-        const margin = 12
-        const rowHeight = 60
+        const margin = 16
+        const rowHeight = 80
+        const containerPadding = 16
         const effectiveWidth = rect.width
-        const cellWidth = (effectiveWidth - (margin * (cols + 1))) / cols
+        
+        // Fixed formula: account for padding and margins correctly
+        const horizontalPadding = containerPadding * 2
+        const totalMargins = margin * (cols - 1)
+        const availableWidth = effectiveWidth - horizontalPadding - totalMargins
+        const cellWidth = availableWidth / cols
         const cellHeight = rowHeight
         
-        const gridX = Math.floor(x / (cellWidth + margin))
-        const gridY = Math.floor(y / (cellHeight + margin))
+        // Account for container padding when calculating grid position
+        const adjustedX = x - containerPadding
+        const adjustedY = y - containerPadding
+        
+        const gridX = Math.floor(adjustedX / (cellWidth + margin))
+        const gridY = Math.floor(adjustedY / (cellHeight + margin))
         
         const dropPosition = {
           x: Math.max(0, Math.min(gridX, cols - widgetSize.w)),
@@ -418,7 +429,8 @@ export const EnhancedGridLayout = ({
             className="absolute pointer-events-none drop-indicator z-20"
             style={createDropIndicator(dropIndicator, { w: dropIndicator.w, h: dropIndicator.h }, {
               rowHeight: 80,
-              margin: [16, 16]
+              margin: [16, 16],
+              containerPadding: [16, 16]
             })}
           />
         )}

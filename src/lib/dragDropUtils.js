@@ -58,22 +58,31 @@ const debounce = (func, wait) => {
  * @returns {Object} - Optimal position {x, y}
  */
 export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, gridConfig = {}) => {
-  const { cols = 12, rowHeight = 60, margin = [12, 12], containerWidth } = gridConfig
+  const { cols = 12, rowHeight = 80, margin = [16, 16], containerWidth, containerPadding = [16, 16] } = gridConfig
   
   // If no widgets exist, place at top-left
   if (!existingWidgets || existingWidgets.length === 0) {
     return { x: 0, y: 0 }
   }
   
-  // Calculate cell size dynamically based on container width
+  // Calculate cell size dynamically based on actual container width
   // This ensures accurate positioning across the entire width, including right side
-  const effectiveWidth = containerWidth || (typeof window !== 'undefined' ? window.innerWidth - 280 : 1140) // Subtract sidebar width
-  const cellWidth = (effectiveWidth - (margin[0] * (cols + 1))) / cols
+  const effectiveWidth = containerWidth || (typeof window !== 'undefined' ? window.innerWidth : 1140)
+  
+  // Fixed formula: width available for grid cells = container width - horizontal padding - margins between cells
+  const horizontalPadding = containerPadding[0] * 2
+  const totalMargins = margin[0] * (cols - 1) // margins BETWEEN cells, not around them
+  const availableWidth = effectiveWidth - horizontalPadding - totalMargins
+  const cellWidth = availableWidth / cols
   const cellHeight = rowHeight
   
   // Convert drop coordinates to grid coordinates with improved precision
-  const gridX = Math.floor(dropData.x / (cellWidth + margin[0]))
-  const gridY = Math.floor(dropData.y / (cellHeight + margin[1]))
+  // Account for container padding
+  const adjustedX = dropData.x - containerPadding[0]
+  const adjustedY = dropData.y - containerPadding[1]
+  
+  const gridX = Math.floor(adjustedX / (cellWidth + margin[0]))
+  const gridY = Math.floor(adjustedY / (cellHeight + margin[1]))
   
   // Clamp to grid bounds - ensure we can drop all the way to the right edge
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
@@ -82,12 +91,16 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
   console.log('📍 Enhanced Drop Calculation:', {
     dropCoords: dropData,
     containerWidth: effectiveWidth,
+    availableWidth,
     cellWidth,
     cellHeight,
+    adjustedCoords: { adjustedX, adjustedY },
     gridCoords: { gridX, gridY },
     finalCoords: { x: clampedX, y: clampedY },
     cols,
-    widgetSize
+    widgetSize,
+    containerPadding,
+    totalMargins
   })
   
   // Check if position is available
@@ -394,19 +407,25 @@ export const generateWidgetId = () => {
  * @returns {Object} - Drop indicator style
  */
 export const createDropIndicator = (position, size, gridConfig = {}) => {
-  const { rowHeight = 80, margin = [16, 16] } = gridConfig
+  const { rowHeight = 80, margin = [16, 16], containerPadding = [16, 16] } = gridConfig
+  
+  // Calculate the cell dimensions (rowHeight for both width and height to maintain square cells)
+  const cellWidth = rowHeight + margin[0]
+  const cellHeight = rowHeight + margin[1]
   
   return {
     position: 'absolute',
-    left: position.x * (rowHeight + margin[0]),
-    top: position.y * (rowHeight + margin[1]),
-    width: size.w * (rowHeight + margin[0]) - margin[0],
-    height: size.h * (rowHeight + margin[1]) - margin[1],
-    border: '2px dashed #ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: '8px',
+    left: containerPadding[0] + (position.x * cellWidth),
+    top: containerPadding[1] + (position.y * cellHeight),
+    width: (size.w * cellWidth) - margin[0],
+    height: (size.h * cellHeight) - margin[1],
+    border: '3px dashed rgba(59, 130, 246, 0.6)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: '12px',
     pointerEvents: 'none',
-    zIndex: 1000
+    zIndex: 1000,
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
+    transition: 'all 0.15s ease'
   }
 }
 
@@ -535,14 +554,23 @@ export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => 
     containerWidth: rect.width
   }
   
-  // Convert to grid coordinates with dynamic cell sizing
-  const { cols = 12, rowHeight = 60, margin = [12, 12] } = gridConfig
+  // Convert to grid coordinates with dynamic cell sizing - use consistent config
+  const { cols = 12, rowHeight = 80, margin = [16, 16], containerPadding = [16, 16] } = gridConfig
   const effectiveWidth = rect.width
-  const cellWidth = (effectiveWidth - (margin[0] * (cols + 1))) / cols
+  
+  // Fixed formula: account for padding and margins correctly
+  const horizontalPadding = containerPadding[0] * 2
+  const totalMargins = margin[0] * (cols - 1)
+  const availableWidth = effectiveWidth - horizontalPadding - totalMargins
+  const cellWidth = availableWidth / cols
   const cellHeight = rowHeight
   
-  const gridX = Math.floor(dropData.x / (cellWidth + margin[0]))
-  const gridY = Math.floor(dropData.y / (cellHeight + margin[1]))
+  // Account for container padding
+  const adjustedX = dropData.x - containerPadding[0]
+  const adjustedY = dropData.y - containerPadding[1]
+  
+  const gridX = Math.floor(adjustedX / (cellWidth + margin[0]))
+  const gridY = Math.floor(adjustedY / (cellHeight + margin[1]))
   
   // Clamp to grid bounds - ensure full-width coverage
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
