@@ -402,7 +402,7 @@ export const SharedDashboardView = ({ panelId, onAccessGranted }) => {
           max={widget.config?.maxValue || widget.maxValue || widget.max || 360}
           unit={widget.config?.unit || widget.unit || '°'}
           color={widget.config?.color || widget.color || '#3b82f6'}
-          value={180} // Default value, will be overridden by MQTT data
+          value={widget.value || 0} // Default value, will be overridden by MQTT data
           topic={widgetMqttTopic}
           valuePath={widgetValuePath}
         />

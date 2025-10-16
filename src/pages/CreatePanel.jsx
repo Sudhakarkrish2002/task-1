@@ -288,7 +288,7 @@ function CreatePanel() {
             max={widget.maxValue || widget.max || 360}
             unit={widget.unit || '°'}
             color={widget.color || '#3b82f6'}
-            value={180}
+            value={widget.value || 0}
             connected={mqttConnected}
             deviceInfo={null}
             topic={widget.mqttTopic}

@@ -75,7 +75,7 @@ export const GaugeWidget = ({
 
     const centerX = rect.width / 2
     const centerY = rect.height / 2
-    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 20 : 15), 10) // Larger radius for mobile
+    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 8 : 6), 10) // Minimal padding for maximum arc size
 
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
@@ -83,10 +83,10 @@ export const GaugeWidget = ({
     // Calculate percentage for filling
     const percentage = Math.max(0, Math.min(1, (safeValue - safeMin) / (safeMax - safeMin)))
     
-    // Background arc (unfilled portion)
+    // Background arc (unfilled portion) - Much thicker
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI)
-    ctx.lineWidth = isMobile ? 16 : 12 // Thicker line for mobile
+    ctx.lineWidth = isMobile ? 22 : 18 // Much thicker arc
     ctx.strokeStyle = '#e5e7eb'
     ctx.stroke()
 
@@ -96,7 +96,7 @@ export const GaugeWidget = ({
     
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, startAngle, endAngle)
-    ctx.lineWidth = isMobile ? 16 : 12 // Thicker line for mobile
+    ctx.lineWidth = isMobile ? 22 : 18 // Much thicker arc
     ctx.strokeStyle = color
     ctx.stroke()
     
@@ -135,23 +135,25 @@ export const GaugeWidget = ({
       </div>
       
       {/* Gauge */}
-      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-4' : 'p-6'} bg-gradient-to-b from-white to-gray-50`}>
-        <div className="relative">
+      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-2' : 'p-3'} bg-gradient-to-b from-white to-gray-50`}>
+        <div className="relative w-full h-full flex items-center justify-center">
           <canvas
             ref={canvasRef}
-            className="drop-shadow-lg"
+            className="drop-shadow-lg max-w-full max-h-full"
             style={{ 
-              maxWidth: isMobile ? '180px' : '140px', 
-              maxHeight: isMobile ? '120px' : '100px' 
+              width: isMobile ? '240px' : '220px', 
+              height: isMobile ? '160px' : '140px',
+              maxWidth: '100%',
+              maxHeight: '100%'
             }}
           />
           {/* Value overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className={`${isMobile ? 'text-3xl' : 'text-2xl'} font-bold text-gray-800 mb-1`}>
+            <div className="text-center px-2">
+              <div className={`${isMobile ? 'text-4xl' : 'text-3xl'} font-bold text-gray-800 leading-none`}>
                 {safeValue}
               </div>
-              <div className={`${isMobile ? 'text-sm' : 'text-xs'} font-medium text-gray-500 uppercase tracking-wide`}>
+              <div className={`${isMobile ? 'text-base' : 'text-sm'} font-semibold text-gray-500 uppercase tracking-wide mt-1`}>
                 {safeUnit}
               </div>
             </div>

@@ -168,7 +168,7 @@ export const ProfessionalGridManager = ({
               max={widget.maxValue || 360}
               unit={widget.unit || widget.data?.unit || '°'}
               color={widget.color || '#3b82f6'}
-              value={180}
+              value={widget.value || 0}
               // MQTT configuration
               topic={widget.mqttTopic}
               valuePath={widget.valuePath}

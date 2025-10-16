@@ -26,7 +26,7 @@ export const Gauge360Widget = ({
   unit = '°',
   color = '#3b82f6',
   panelId = 'default',
-  value = 180,
+  value = 0,
   connected = false,
   deviceInfo = null,
   // Optional MQTT wiring
@@ -75,7 +75,7 @@ export const Gauge360Widget = ({
 
     const centerX = rect.width / 2
     const centerY = rect.height / 2
-    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 25 : 20), 10)
+    const radius = Math.max(Math.min(centerX, centerY) - (isMobile ? 15 : 12), 10)
 
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
@@ -86,7 +86,7 @@ export const Gauge360Widget = ({
     // Background arc (full circle - unfilled portion)
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-    ctx.lineWidth = isMobile ? 16 : 12
+    ctx.lineWidth = isMobile ? 20 : 16
     ctx.strokeStyle = '#e5e7eb'
     ctx.stroke()
 
@@ -96,7 +96,7 @@ export const Gauge360Widget = ({
     
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, startAngle, endAngle)
-    ctx.lineWidth = isMobile ? 16 : 12
+    ctx.lineWidth = isMobile ? 20 : 16
     ctx.strokeStyle = color
     ctx.stroke()
     
@@ -116,12 +116,6 @@ export const Gauge360Widget = ({
       ctx.fillStyle = '#ffffff'
       ctx.fill()
     }
-
-    // Draw center point
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, (isMobile ? 6 : 4), 0, 2 * Math.PI)
-    ctx.fillStyle = color
-    ctx.fill()
 
     // Draw tick marks for 0°, 90°, 180°, 270°
     const tickAngles = [0, 90, 180, 270]
@@ -157,25 +151,25 @@ export const Gauge360Widget = ({
       </div>
       
       {/* Gauge */}
-      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-4' : 'p-6'} bg-gradient-to-b from-white to-gray-50`}>
-        <div className="relative">
+      <div className={`flex-1 flex items-center justify-center ${isMobile ? 'p-2' : 'p-3'} bg-gradient-to-b from-white to-gray-50`}>
+        <div className="relative w-full h-full flex items-center justify-center">
             <canvas
               ref={canvasRef}
               className="drop-shadow-lg max-w-full max-h-full"
               style={{ 
-                width: isMobile ? '140px' : '120px', 
-                height: isMobile ? '140px' : '120px',
+                width: isMobile ? '180px' : '160px', 
+                height: isMobile ? '180px' : '160px',
                 maxWidth: '100%',
                 maxHeight: '100%'
               }}
             />
           {/* Value overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center max-w-full max-h-full overflow-hidden">
-              <div className={`${isMobile ? 'text-xl' : 'text-lg'} font-bold text-gray-800 mb-1 truncate`}>
+            <div className="text-center max-w-full max-h-full overflow-hidden px-2">
+              <div className={`${isMobile ? 'text-4xl' : 'text-3xl'} font-bold text-gray-800 leading-none truncate`}>
                 {safeValue}
               </div>
-              <div className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-500 uppercase tracking-wide truncate`}>
+              <div className={`${isMobile ? 'text-sm' : 'text-xs'} font-semibold text-gray-500 uppercase tracking-wide truncate mt-1`}>
                 {safeUnit}
               </div>
             </div>
