@@ -170,6 +170,10 @@
   cursor: grab;
 }
 
+.grid-widget:not(.dragging):not([draggable="false"]):active {
+  cursor: grabbing;
+}
+
 /* Widget Content */
 .widget-content {
   width: 100%;
@@ -180,6 +184,20 @@
   /* Ensure content stays within widget boundaries */
   position: relative;
   box-sizing: border-box;
+}
+
+/* Fix drag and drop for bigger screens - prevent widget content from blocking drag events */
+.grid-widget[draggable="true"] .widget-content,
+.grid-widget[draggable="true"] .widget-content * {
+  pointer-events: none;
+}
+
+/* Allow interaction only when widget is selected or in preview mode */
+.grid-widget.selected .widget-content,
+.grid-widget.selected .widget-content *,
+.grid-widget[draggable="false"] .widget-content,
+.grid-widget[draggable="false"] .widget-content * {
+  pointer-events: auto;
 }
 
 /* Special handling for 3D model widget content */
@@ -212,6 +230,7 @@
   opacity: 0;
   transition: opacity 0.2s ease;
   z-index: 100; /* Ensure controls appear above all widget content */
+  pointer-events: auto; /* Ensure controls are clickable */
 }
 
 .grid-widget.selected .widget-controls {
