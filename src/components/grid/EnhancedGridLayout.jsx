@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { AlertTriangle, CheckCircle, RotateCcw, Maximize2, Minimize2, Trash2, Copy, ChevronDown, Settings } from 'lucide-react'
 import { getGridLayoutProps } from '../../lib/gridUtils'
@@ -60,8 +60,24 @@ export const EnhancedGridLayout = ({
   const [dragPosition, setDragPosition] = useState(null)
   const [collidingWidgets, setCollidingWidgets] = useState([])
   const [isAnimating, setIsAnimating] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(0)
   const gridRef = useRef(null)
   const containerRef = useRef(null)
+
+  // Update container width on mount and resize for accurate drop calculations
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth
+        setContainerWidth(width)
+        console.log('📏 Container width updated:', width, 'px')
+      }
+    }
+    
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
 
   // Handle layout changes
   const handleLayoutChangeInternal = useCallback((layout, layouts) => {
@@ -127,12 +143,13 @@ export const EnhancedGridLayout = ({
       return
     }
     
-    // Use enhanced professional drop handler with consistent grid config
+    // Use enhanced professional drop handler with actual container width
     handleProfessionalDrop(event, widgets, onWidgetAdd, {
       cols: 12,
       rowHeight: 80,
       margin: [16, 16],
-      containerPadding: [16, 16]
+      containerPadding: [16, 16],
+      containerWidth: containerWidth || event.currentTarget.getBoundingClientRect().width
     })
     
     // Clear visual feedback
@@ -172,7 +189,7 @@ export const EnhancedGridLayout = ({
     }
     
     window.dragOverThrottle = setTimeout(() => {
-      // Calculate drop position for visual feedback with enhanced precision
+      // Calculate drop position for visual feedback with actual container width
       if (!e.currentTarget) return
       
       const rect = e.currentTarget.getBoundingClientRect()
@@ -186,18 +203,22 @@ export const EnhancedGridLayout = ({
       if (widgetType) {
         const widgetSize = getWidgetSize(widgetType)
         
-        // Use consistent grid config matching GRID_CONFIG
+        // Use actual container width for accurate calculations
         const cols = 12
         const margin = 16
         const rowHeight = 80
         const containerPadding = 16
-        const effectiveWidth = rect.width
+        const actualWidth = containerWidth || rect.width
         
-        // Fixed formula: account for padding and margins correctly
-        const horizontalPadding = containerPadding * 2
-        const totalMargins = margin * (cols - 1)
-        const availableWidth = effectiveWidth - horizontalPadding - totalMargins
-        const cellWidth = availableWidth / cols
+        console.log('🎯 Drop calculation:', {
+          actualWidth,
+          containerWidth,
+          rectWidth: rect.width,
+          x, y
+        })
+        
+        // Calculate cell width using actual container dimensions
+        const cellWidth = (actualWidth - containerPadding * 2 - margin * (cols - 1)) / cols
         const cellHeight = rowHeight
         
         // Account for container padding when calculating grid position
@@ -213,6 +234,14 @@ export const EnhancedGridLayout = ({
           w: widgetSize.w,
           h: widgetSize.h
         }
+        
+        console.log('📍 Drop position calculated:', {
+          cellWidth,
+          cellHeight,
+          gridX,
+          gridY,
+          finalPosition: dropPosition
+        })
         
         setDropIndicator(dropPosition)
         

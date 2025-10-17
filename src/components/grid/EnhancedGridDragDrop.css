@@ -263,6 +263,11 @@
 
 /* Extra Large (1920px+) - 4K displays */
 @media (min-width: 1920px) {
+  .enhanced-grid-layout {
+    max-width: none;
+    width: 100%;
+  }
+  
   .react-grid-item {
     border-radius: 16px;
   }
@@ -277,14 +282,79 @@
       100% 80px,
       calc((100% - 13 * 12px) / 12) 100%;
   }
+  
+  .drop-indicator {
+    border-width: 3px;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+  }
 }
 
-/* Large (1200px-1919px) - Standard desktops */
+/* Ultra-wide and 4K displays (2560px+) */
+@media (min-width: 2560px) {
+  .enhanced-grid-layout {
+    max-width: none;
+    width: 100%;
+  }
+  
+  .react-grid-item {
+    border-radius: 18px;
+  }
+  
+  .react-resizable-handle {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .enhanced-grid-layout::before {
+    background-size: 
+      100% 90px,
+      calc((100% - 13 * 12px) / 12) 100%;
+  }
+  
+  .drop-indicator {
+    border-width: 4px;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+  
+  /* Enhanced right-edge visual feedback for ultra-wide screens */
+  .enhanced-grid-layout.drag-over .grid-container::after {
+    width: 8px;
+    box-shadow: -3px 0 15px rgba(59, 130, 246, 0.4);
+  }
+  
+  .enhanced-grid-layout.drag-over .grid-container::before {
+    width: 8px;
+    box-shadow: 3px 0 15px rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* Large (1200px-1919px) - Standard desktops including 21-inch monitors */
 @media (min-width: 1200px) and (max-width: 1919px) {
+  .enhanced-grid-layout {
+    max-width: none;
+    width: 100%;
+  }
+  
   .enhanced-grid-layout::before {
     background-size: 
       100% 72px,
       calc((100% - 13 * 12px) / 12) 100%;
+  }
+  
+  .drop-indicator {
+    border-width: 2px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  }
+  
+  /* Enhanced visual feedback for right-edge drops on large monitors */
+  .enhanced-grid-layout.drag-over .grid-container::after {
+    width: 6px;
+    box-shadow: -2px 0 12px rgba(59, 130, 246, 0.35);
+  }
+  
+  .enhanced-grid-layout.drag-over .grid-container::before {
+    width: 6px;
+    box-shadow: 2px 0 12px rgba(59, 130, 246, 0.35);
   }
 }
 

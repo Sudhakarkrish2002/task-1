@@ -436,19 +436,20 @@ export const fixLayoutMinMaxValues = (layouts) => {
 
 /**
  * Grid layout configuration for different breakpoints
+ * Updated to ensure consistency with drag-drop calculations
  */
 export const GRID_CONFIG = {
   breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
   cols: { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 },
   rowHeight: 80,
-  margin: [16, 16],
-  containerPadding: [16, 16, 32, 16], // Add bottom padding to ensure widgets are visible
+  margin: [16, 16], // Consistent with drag-drop calculations
+  containerPadding: [16, 16, 32, 16], // Consistent with drag-drop calculations
   maxRows: 1000, // Increased to allow more widgets at the bottom
   preventCollision: true,
   compactType: 'vertical',
   autoSize: true,
   allowOverlap: false,
-  isBounded: false // Allow unbounded growth for bottom placement
+  isBounded: false // Allow unbounded growth for full-width scalability
 }
 
 /**
@@ -476,9 +477,10 @@ export const getGridLayoutProps = (isPreviewMode = false) => ({
   cols: GRID_CONFIG.cols,
   // Ensure widgets stay within bounds
   isDroppable: !isPreviewMode,
-  // Allow dynamic height expansion for bottom placement
+  // Allow dynamic height expansion and full-width scalability
   style: { 
     width: '100%',
+    maxWidth: 'none', // Ensure no width constraints on large monitors
     minHeight: isPreviewMode ? '800px' : '100%',
     height: isPreviewMode ? 'auto' : 'auto',
     overflow: isPreviewMode ? 'visible' : 'visible',

@@ -65,15 +65,13 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
     return { x: 0, y: 0 }
   }
   
-  // Calculate cell size dynamically based on actual container width
-  // This ensures accurate positioning across the entire width, including right side
-  const effectiveWidth = containerWidth || (typeof window !== 'undefined' ? window.innerWidth : 1140)
+  // Use actual container width for accurate calculations
+  const effectiveWidth = containerWidth || dropData.containerWidth || (typeof window !== 'undefined' ? window.innerWidth : 1140)
   
-  // Fixed formula: width available for grid cells = container width - horizontal padding - margins between cells
+  // Fixed formula: match React-Grid-Layout's internal width calculation exactly
   const horizontalPadding = containerPadding[0] * 2
-  const totalMargins = margin[0] * (cols - 1) // margins BETWEEN cells, not around them
-  const availableWidth = effectiveWidth - horizontalPadding - totalMargins
-  const cellWidth = availableWidth / cols
+  const totalMargins = margin[0] * (cols - 1) // margins BETWEEN cells
+  const cellWidth = (effectiveWidth - horizontalPadding - totalMargins) / cols
   const cellHeight = rowHeight
   
   // Convert drop coordinates to grid coordinates with improved precision
@@ -88,10 +86,12 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
   const clampedX = Math.max(0, Math.min(gridX, cols - widgetSize.w))
   const clampedY = Math.max(0, gridY)
   
-  console.log('📍 Enhanced Drop Calculation:', {
+  console.log('📍 Enhanced Drop Calculation (Fixed):', {
     dropCoords: dropData,
-    containerWidth: effectiveWidth,
-    availableWidth,
+    effectiveWidth,
+    containerWidth,
+    horizontalPadding,
+    totalMargins,
     cellWidth,
     cellHeight,
     adjustedCoords: { adjustedX, adjustedY },
@@ -100,7 +100,7 @@ export const calculateOptimalPosition = (dropData, existingWidgets, widgetSize, 
     cols,
     widgetSize,
     containerPadding,
-    totalMargins
+    margin
   })
   
   // Check if position is available
@@ -355,7 +355,7 @@ export const handleProfessionalDrop = (event, existingWidgets, onWidgetAdd, grid
     dropData
   })
   
-  // Calculate optimal position with container width for scalability
+  // Calculate optimal position with actual container width for scalability
   const position = calculateOptimalPosition(dropData, existingWidgets, widgetSize, {
     ...gridConfig,
     containerWidth: rect.width
@@ -558,11 +558,10 @@ export const handleEnhancedDragOver = (event, existingWidgets, options = {}) => 
   const { cols = 12, rowHeight = 80, margin = [16, 16], containerPadding = [16, 16] } = gridConfig
   const effectiveWidth = rect.width
   
-  // Fixed formula: account for padding and margins correctly
+  // Fixed formula: match React-Grid-Layout's internal width calculation exactly
   const horizontalPadding = containerPadding[0] * 2
   const totalMargins = margin[0] * (cols - 1)
-  const availableWidth = effectiveWidth - horizontalPadding - totalMargins
-  const cellWidth = availableWidth / cols
+  const cellWidth = (effectiveWidth - horizontalPadding - totalMargins) / cols
   const cellHeight = rowHeight
   
   // Account for container padding
